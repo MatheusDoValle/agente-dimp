@@ -1,0 +1,20 @@
+{
+  "profiles": {
+    "LocalDeterministic": {
+      "commandName": "Project",
+      "launchBrowser": false,
+      "applicationUrl": "http://127.0.0.1:5080",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "LocalDeterministic"
+      }
+    },
+    "LocalReal": {
+      "commandName": "Project",
+      "launchBrowser": false,
+      "applicationUrl": "http://127.0.0.1:5080",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "LocalReal"
+      }
+    }
+  }
+}

@@ -1,0 +1,45 @@
+# .NET / editors
+**/bin/
+**/obj/
+*.user
+*.suo
+packages/
+.vs/
+.vscode/
+.idea/
+TestResults/
+artifacts/
+coverage/
+*.log
+*.log.*
+# Local secrets (examples are intentionally versioned)
+.env
+.env.*
+!.env.example
+!**/.env.example
+**/appsettings.Secrets.json
+**/appsettings.*.local.json
+*.pfx
+*.pem
+*.key
+secrets/
+# Transient customer artifacts / reversible masking
+.local/
+App_Data/
+uploads/
+tmp/
+*.tmp
+*.dimp
+!tests/fixtures/**/*.dimp
+*.sqlite
+*.sqlite-*
+*.sqlite3
+*.sqlite3-*
+*.db
+*.db-*
+*.mask-map.json
+mask-maps/
+# OS
+.DS_Store
+Thumbs.db
+# Keep .agents/, .specify/, specs/, lock files and official PDF reference versioned.

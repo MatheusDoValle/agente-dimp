@@ -1,0 +1,416 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Agente DIMP — administracao Api.RAG",
+    "version": "1.0.0",
+    "description": "Acesso REST administrativo local. Api.Agente usa MCP para recuperacao e referencias, nunca este REST como atalho."
+  },
+  "servers": [
+    {
+      "url": "http://127.0.0.1:5081"
+    }
+  ],
+  "security": [],
+  "paths": {
+    "/api/v1/documentos/ingestoes": {
+      "post": {
+        "operationId": "ingestManual",
+        "summary": "Recebe PDF oficial e metadados para ingestao versionada.",
+        "description": "sourceUrl registra proveniencia; o servidor nao baixa URLs fornecidas pelo cliente. Perfis devem existir e ser validados. Mesmo hash e perfis reutilizam job/resultados persistidos, incluindo submissao concorrente. Nao ha garantia de cobranca externa exatamente uma vez: crash apos processamento no provedor e antes da persistencia deixa tentativa unknown, sem repeticao automatica. Retomada usa checkpoints; revisao so e publicada apos confirmar todos os chunks.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  },
+                  "sourceUrl": {
+                    "type": "string",
+                    "format": "uri"
+                  },
+                  "layoutVersion": {
+                    "type": "string",
+                    "const": "10"
+                  },
+                  "expectedSha256": {
+                    "type": "string",
+                    "pattern": "^[A-Fa-f0-9]{64}$"
+                  },
+                  "extractionProfileId": {
+                    "type": "string"
+                  },
+                  "chunkProfileId": {
+                    "type": "string"
+                  },
+                  "embeddingProfileId": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "file",
+                  "sourceUrl",
+                  "layoutVersion",
+                  "expectedSha256",
+                  "extractionProfileId",
+                  "chunkProfileId",
+                  "embeddingProfileId"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Revisao/perfis ja ingeridos, sem duplicacao.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngestionAccepted"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Ingestao aceita.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngestionAccepted"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Metadados ausentes/invalidos.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Limite efetivo do ambiente excedido.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Documento nao PDF.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Hash divergente ou perfil inexistente.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Dependencia indisponivel.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/documentos/ingestoes/{ingestionId}": {
+      "parameters": [
+        {
+          "name": "ingestionId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "get": {
+        "operationId": "getIngestionStatus",
+        "responses": {
+          "200": {
+            "description": "Estado da ingestao.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngestionStatus"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Ingestao desconhecida.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/documentos/{documentId}/revisoes": {
+      "parameters": [
+        {
+          "name": "documentId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "get": {
+        "operationId": "listDocumentRevisions",
+        "responses": {
+          "200": {
+            "description": "Revisoes publicadas identificadas por hash.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Revisions"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Documento desconhecido.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Problem": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "correlationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "executionId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "correlationId",
+          "executionId"
+        ]
+      },
+      "IngestionAccepted": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "ingestionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "documentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "revisionSha256": {
+            "type": "string"
+          },
+          "statusUrl": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "recebida",
+              "concluida"
+            ]
+          }
+        },
+        "required": [
+          "ingestionId",
+          "documentId",
+          "revisionSha256",
+          "statusUrl",
+          "status"
+        ]
+      },
+      "IngestionStatus": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "ingestionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "documentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "revisionSha256": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "recebida",
+              "em_processamento",
+              "concluida",
+              "falhou"
+            ]
+          },
+          "stage": {
+            "type": "string",
+            "enum": [
+              "recebimento",
+              "extracao",
+              "segmentacao",
+              "embeddings",
+              "publicacao"
+            ]
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "extractionProfileId": {
+            "type": "string"
+          },
+          "chunkProfileId": {
+            "type": "string"
+          },
+          "embeddingProfileId": {
+            "type": "string"
+          },
+          "limitationCodes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "ingestionId",
+          "documentId",
+          "revisionSha256",
+          "status",
+          "stage",
+          "updatedAt",
+          "extractionProfileId",
+          "chunkProfileId",
+          "embeddingProfileId",
+          "limitationCodes"
+        ]
+      },
+      "Revision": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "documentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "revisionSha256": {
+            "type": "string"
+          },
+          "layoutVersion": {
+            "type": "string",
+            "const": "10"
+          },
+          "sourceUrl": {
+            "type": "string",
+            "format": "uri"
+          },
+          "pageCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "retrievedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "embeddingProfileId": {
+            "type": "string"
+          },
+          "extractionProfileId": {
+            "type": "string"
+          },
+          "chunkProfileId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "documentId",
+          "revisionSha256",
+          "layoutVersion",
+          "sourceUrl",
+          "pageCount",
+          "retrievedAt",
+          "embeddingProfileId",
+          "extractionProfileId",
+          "chunkProfileId"
+        ]
+      },
+      "Revisions": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Revision"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      }
+    }
+  }
+}

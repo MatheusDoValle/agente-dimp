@@ -1,0 +1,119 @@
+{
+  "package": "infis-skills-spec-kit-completo_7208.zip",
+  "archiveSha256": "F4138C5049E608506CC739ABBC047EB1AE825C2946FA2C2E838CBFBD2395B442",
+  "installedOn": "2026-10-29",
+  "scope": "project",
+  "sourceReadme": "docs/skills-packages/infis-skills-spec-kit-completo_7208/README.original.md",
+  "adaptations": {
+    "rag-pgvector": [
+      "Contextualização no Agente DIMP, decisões existentes, EX-001 e limites de atuação.",
+      "Busca exata inicial, limites de produto não presumidos e autorização conforme EX-001."
+    ],
+    "mcp-client-server": [
+      "Contextualização no Agente DIMP, decisões existentes, EX-001 e limites de atuação.",
+      "Transporte e testes preservam EX-001; validação e lista de tools continuam obrigatórias."
+    ],
+    "semantic-kernel-tools": [
+      "Contextualização no Agente DIMP, decisões existentes, EX-001 e limites de atuação.",
+      "Descrição direcionada ao DIMP e ferramentas somente de leitura no marco atual."
+    ],
+    "memoria-mongodb": [
+      "Contextualização no Agente DIMP, decisões existentes, EX-001 e limites de atuação.",
+      "Modelo conversation_contexts, chaves camelCase, TTL auxiliar e exclusão explícita conforme ADR-0002."
+    ],
+    "controle-custos-llm": [
+      "Contextualização no Agente DIMP, decisões existentes, EX-001 e limites de atuação.",
+      "Ledger por proprietário de dados, correlação MCP e falha fechada antes de nova chamada externa."
+    ],
+    "testes-agentes-ia": [
+      "Contextualização no Agente DIMP, decisões existentes, EX-001 e limites de atuação.",
+      "Removida referência a formato fora do escopo DIMP; testes alinhados à EX-001."
+    ]
+  },
+  "files": [
+    {
+      "archiveEntry": ".agents/skills/rag-pgvector/SKILL.md",
+      "destination": ".agents/skills/rag-pgvector/SKILL.md",
+      "sourceSha256": "E64C87DD0A9DDC2EE6020513A53682BDEA7B2BD1C186E8807A7684C9B8076909",
+      "installedSha256": "1F0340B51A66A2F2A788D73F0C48958B9E8BDA753A040F7F223D2B1C1102E630",
+      "adapted": true
+    },
+    {
+      "archiveEntry": ".agents/skills/rag-pgvector/agents/openai.yaml",
+      "destination": ".agents/skills/rag-pgvector/agents/openai.yaml",
+      "sourceSha256": "DF005553269D2A0110D55CDEDBFBE93ACA46234B9B86977DDBC9929536CE3113",
+      "installedSha256": "DF005553269D2A0110D55CDEDBFBE93ACA46234B9B86977DDBC9929536CE3113",
+      "adapted": false
+    },
+    {
+      "archiveEntry": ".agents/skills/mcp-client-server/SKILL.md",
+      "destination": ".agents/skills/mcp-client-server/SKILL.md",
+      "sourceSha256": "015AD75143F29387B55D493F1A83EA7E9F732573D94EA7ADE9B1BD56ECFA8EB5",
+      "installedSha256": "9D5331ABBB29D83EA623D749BC62FAFD0F7E19DD4B68244522047E1A4BFAACED",
+      "adapted": true
+    },
+    {
+      "archiveEntry": ".agents/skills/mcp-client-server/agents/openai.yaml",
+      "destination": ".agents/skills/mcp-client-server/agents/openai.yaml",
+      "sourceSha256": "0762CC8AC35F0CAF13AAA11B38BF060666AF0FC91EC826B0F1F8F9B722F6F595",
+      "installedSha256": "0762CC8AC35F0CAF13AAA11B38BF060666AF0FC91EC826B0F1F8F9B722F6F595",
+      "adapted": false
+    },
+    {
+      "archiveEntry": ".agents/skills/semantic-kernel-tools/SKILL.md",
+      "destination": ".agents/skills/semantic-kernel-tools/SKILL.md",
+      "sourceSha256": "C65F65E6F3645C7D627ED50DD6F03FFC2DF73D993FE39F6743A9A055BF4B45A4",
+      "installedSha256": "3AA16BD0AA1781CCD836C49B4FB5FBB8C561CC0BFD9317E6443CC5FEA07C511A",
+      "adapted": true
+    },
+    {
+      "archiveEntry": ".agents/skills/semantic-kernel-tools/agents/openai.yaml",
+      "destination": ".agents/skills/semantic-kernel-tools/agents/openai.yaml",
+      "sourceSha256": "7EECB9EAAB0C9A1A51AD3545A8D8C06FD8356258057E011D0EC7663ABCF71A1C",
+      "installedSha256": "7EECB9EAAB0C9A1A51AD3545A8D8C06FD8356258057E011D0EC7663ABCF71A1C",
+      "adapted": false
+    },
+    {
+      "archiveEntry": ".agents/skills/memoria-mongodb/SKILL.md",
+      "destination": ".agents/skills/memoria-mongodb/SKILL.md",
+      "sourceSha256": "313185806ABB350D98EE983499896FB51632D24E78489FFDFDCD507F9296D9A0",
+      "installedSha256": "C36881934C6F2D33FC079BE63C075DC1047DE8DA5E0C96EBDEEA8098B68408AF",
+      "adapted": true
+    },
+    {
+      "archiveEntry": ".agents/skills/memoria-mongodb/agents/openai.yaml",
+      "destination": ".agents/skills/memoria-mongodb/agents/openai.yaml",
+      "sourceSha256": "7003D980476797C44B1A4AA2C77B9F74A03CB272C86DA2A85CCAFCF4D272CFC5",
+      "installedSha256": "7003D980476797C44B1A4AA2C77B9F74A03CB272C86DA2A85CCAFCF4D272CFC5",
+      "adapted": false
+    },
+    {
+      "archiveEntry": ".agents/skills/controle-custos-llm/SKILL.md",
+      "destination": ".agents/skills/controle-custos-llm/SKILL.md",
+      "sourceSha256": "74DCD4C960A3DD65C4A1C36D287C4D9E9779633ABA00FAC09CDD6EA14F9D7BA4",
+      "installedSha256": "F0B9BA590F89E4DB8939E3E605738F10ECA04E26511529C145689347B3EAA18B",
+      "adapted": true
+    },
+    {
+      "archiveEntry": ".agents/skills/controle-custos-llm/agents/openai.yaml",
+      "destination": ".agents/skills/controle-custos-llm/agents/openai.yaml",
+      "sourceSha256": "8B66EA54D3F56C06E65A156A49C32CE679EBEF41FFE4A5BC09C40116E2601D36",
+      "installedSha256": "8B66EA54D3F56C06E65A156A49C32CE679EBEF41FFE4A5BC09C40116E2601D36",
+      "adapted": false
+    },
+    {
+      "archiveEntry": ".agents/skills/testes-agentes-ia/SKILL.md",
+      "destination": ".agents/skills/testes-agentes-ia/SKILL.md",
+      "sourceSha256": "96F255F5791C381AEE590EB491969D7D711D8473CC858EBA4F84AF9430F3DC9D",
+      "installedSha256": "2B08D5253AADA66476F2CBCA4B0D078053819AEA2957B02A9C8A24A13824DF85",
+      "adapted": true
+    },
+    {
+      "archiveEntry": ".agents/skills/testes-agentes-ia/agents/openai.yaml",
+      "destination": ".agents/skills/testes-agentes-ia/agents/openai.yaml",
+      "sourceSha256": "99799E2E4C7DADE760916BB6F6C2F14C1AC2EED2DA92AEE42B5F75842796880A",
+      "installedSha256": "99799E2E4C7DADE760916BB6F6C2F14C1AC2EED2DA92AEE42B5F75842796880A",
+      "adapted": false
+    }
+  ]
+}

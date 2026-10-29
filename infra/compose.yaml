@@ -1,0 +1,42 @@
+name: agentedimp-local
+services:
+  postgres:
+    image: pgvector/pgvector:pg17@sha256:ac08538c6f8b9904c33c8224c5e5706dbe760aca29db1d096972b4052c22a75d
+    environment:
+      POSTGRES_USER: bootstrap
+      POSTGRES_DB: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_BOOTSTRAP_PASSWORD:?Execute New-LocalEnvironment.ps1}
+      AGENT_DB_PASSWORD: ${AGENT_DB_PASSWORD:?Execute New-LocalEnvironment.ps1}
+      RAG_DB_PASSWORD: ${RAG_DB_PASSWORD:?Execute New-LocalEnvironment.ps1}
+    ports:
+      - "127.0.0.1:55432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./postgres/001-init.sh:/docker-entrypoint-initdb.d/001-init.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bootstrap -d postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+  mongo:
+    image: mongo:8.0@sha256:b9924c330a8bbc5800fe9c69f04a84e221eca7b28fd049a0354147d9908fa142
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: local_admin
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_BOOTSTRAP_PASSWORD:?Execute New-LocalEnvironment.ps1}
+      MONGO_INITDB_DATABASE: agente_memory
+      AGENT_MEMORY_PASSWORD: ${AGENT_MEMORY_PASSWORD:?Execute New-LocalEnvironment.ps1}
+    ports:
+      - "127.0.0.1:57017:27017"
+    volumes:
+      - mongodata:/data/db
+      - ./mongo/001-init.js:/docker-entrypoint-initdb.d/001-init.js:ro
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "quit(db.adminCommand({ping:1}).ok === 1 ? 0 : 1)"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+volumes:
+  pgdata:
+  mongodata:

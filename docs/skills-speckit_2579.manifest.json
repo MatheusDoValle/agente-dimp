@@ -1,0 +1,33 @@
+{
+  "package": "skills-speckit_2579.zip",
+  "archiveSha256": "0D25EA5DB0C0C230CD0E671BD64FB1C575EBE28512680FC3A095221A0F035F87",
+  "installedOn": "2026-10-29",
+  "scope": "project",
+  "importedWithoutChanges": true,
+  "files": [
+    {
+      "archiveEntry": "skills-speckit/github-versionamento/agents/openai.yaml",
+      "destination": ".agents/skills/github-versionamento/agents/openai.yaml",
+      "bytes": 138,
+      "sha256": "8F0B7F90565AD269ED4348076DFEAA838C9FF413370F61EB46DC6E864E53D4EB"
+    },
+    {
+      "archiveEntry": "skills-speckit/github-versionamento/SKILL.md",
+      "destination": ".agents/skills/github-versionamento/SKILL.md",
+      "bytes": 4183,
+      "sha256": "7DF4ABB5D92E520F0385549FF80B5C8F6F459606AB28EC7A34068201C0391025"
+    },
+    {
+      "archiveEntry": "skills-speckit/vercel-dotnet-pgvector-atlas/agents/openai.yaml",
+      "destination": ".agents/skills/vercel-dotnet-pgvector-atlas/agents/openai.yaml",
+      "bytes": 141,
+      "sha256": "21E47FF05A9745E42A3644B47C089C043BEBDB863782EF008D75D167CA58BA17"
+    },
+    {
+      "archiveEntry": "skills-speckit/vercel-dotnet-pgvector-atlas/SKILL.md",
+      "destination": ".agents/skills/vercel-dotnet-pgvector-atlas/SKILL.md",
+      "bytes": 7565,
+      "sha256": "A87ECC0E0036EE55E61D3DEDD0D393554FDF54F70914B79B70A8D0603D9263A2"
+    }
+  ]
+}

@@ -1,0 +1,510 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:infis:agente-dimp:rag-mcp:1.0.0",
+  "title": "Schemas de negocio MCP; cada ferramenta referencia seus $defs de input/output",
+  "$defs": {
+    "BusinessError": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "error": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "code": {
+              "type": "string",
+              "minLength": 1
+            },
+            "message": {
+              "type": "string",
+              "minLength": 1
+            },
+            "retryable": {
+              "type": "boolean"
+            },
+            "correlationId": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "code",
+            "message",
+            "retryable",
+            "correlationId"
+          ]
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    "UsageReference": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "callAttemptId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "serviceOwner": {
+          "const": "Api.RAG"
+        },
+        "usageState": {
+          "enum": [
+            "reported",
+            "partial",
+            "unknown"
+          ]
+        },
+        "tokensInput": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "tokensOutput": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "cachedTokens": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "embeddingTokens": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        }
+      },
+      "required": [
+        "callAttemptId",
+        "serviceOwner",
+        "usageState",
+        "tokensInput",
+        "tokensOutput",
+        "cachedTokens",
+        "embeddingTokens"
+      ]
+    },
+    "Chunk": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "chunkId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "documentId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "documentRevisionSha256": {
+          "type": "string",
+          "pattern": "^[a-fA-F0-9]{64}$"
+        },
+        "layoutVersion": {
+          "const": "10"
+        },
+        "pages": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "section": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "recordCodes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[0-9]{4}$"
+          }
+        },
+        "fieldCodes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "text": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "chunkId",
+        "documentId",
+        "documentRevisionSha256",
+        "layoutVersion",
+        "pages",
+        "section",
+        "recordCodes",
+        "fieldCodes",
+        "text"
+      ]
+    },
+    "Hit": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "chunkId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "documentId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "documentRevisionSha256": {
+          "type": "string",
+          "pattern": "^[a-fA-F0-9]{64}$"
+        },
+        "layoutVersion": {
+          "const": "10"
+        },
+        "embeddingProfileId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "pages": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "section": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "recordCodes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[0-9]{4}$"
+          }
+        },
+        "fieldCodes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "text": {
+          "type": "string",
+          "minLength": 1
+        },
+        "rankingMetric": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "const": "cosine_distance"
+            },
+            "value": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 2
+            }
+          },
+          "required": [
+            "name",
+            "value"
+          ]
+        }
+      },
+      "required": [
+        "chunkId",
+        "documentId",
+        "documentRevisionSha256",
+        "layoutVersion",
+        "embeddingProfileId",
+        "pages",
+        "section",
+        "recordCodes",
+        "fieldCodes",
+        "text",
+        "rankingMetric"
+      ]
+    },
+    "search_manual_input": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "query": {
+          "type": "string",
+          "minLength": 1
+        },
+        "layoutVersion": {
+          "const": "10"
+        },
+        "documentRevisionSha256": {
+          "type": "string",
+          "pattern": "^[a-fA-F0-9]{64}$"
+        },
+        "embeddingProfileId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "recordCodes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[0-9]{4}$"
+          }
+        },
+        "ruleIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "required": [
+        "query",
+        "layoutVersion",
+        "documentRevisionSha256",
+        "embeddingProfileId"
+      ]
+    },
+    "search_manual_success": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "retrievalId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "hits": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Hit"
+          }
+        },
+        "limitationCodes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "usageReferences": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/UsageReference"
+          }
+        }
+      },
+      "required": [
+        "retrievalId",
+        "hits",
+        "limitationCodes",
+        "usageReferences"
+      ]
+    },
+    "get_manual_chunk_input": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "chunkId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "documentRevisionSha256": {
+          "type": "string",
+          "pattern": "^[a-fA-F0-9]{64}$"
+        }
+      },
+      "required": [
+        "chunkId",
+        "documentRevisionSha256"
+      ]
+    },
+    "get_manual_chunk_success": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "chunk": {
+          "$ref": "#/$defs/Chunk"
+        },
+        "limitationCodes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "required": [
+        "chunk",
+        "limitationCodes"
+      ]
+    },
+    "get_document_revision_input": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "documentRevisionSha256": {
+          "type": "string",
+          "pattern": "^[a-fA-F0-9]{64}$"
+        }
+      },
+      "required": [
+        "documentRevisionSha256"
+      ]
+    },
+    "get_document_revision_success": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "documentId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "documentRevisionSha256": {
+          "type": "string",
+          "pattern": "^[a-fA-F0-9]{64}$"
+        },
+        "sourceUrl": {
+          "type": "string",
+          "format": "uri"
+        },
+        "layoutVersion": {
+          "const": "10"
+        },
+        "pageCount": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "embeddingProfileIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "limitationCodes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "required": [
+        "documentId",
+        "documentRevisionSha256",
+        "sourceUrl",
+        "layoutVersion",
+        "pageCount",
+        "embeddingProfileIds",
+        "limitationCodes"
+      ]
+    },
+    "get_ingestion_usage_input": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "ingestionId": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "required": [
+        "ingestionId"
+      ]
+    },
+    "get_ingestion_usage_success": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "ingestionId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "attempts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/UsageReference"
+          }
+        },
+        "hasUnknownUsage": {
+          "type": "boolean"
+        },
+        "limitationCodes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "required": [
+        "ingestionId",
+        "attempts",
+        "hasUnknownUsage",
+        "limitationCodes"
+      ]
+    },
+    "search_manual_output": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/search_manual_success"
+        },
+        {
+          "$ref": "#/$defs/BusinessError"
+        }
+      ]
+    },
+    "get_manual_chunk_output": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/get_manual_chunk_success"
+        },
+        {
+          "$ref": "#/$defs/BusinessError"
+        }
+      ]
+    },
+    "get_document_revision_output": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/get_document_revision_success"
+        },
+        {
+          "$ref": "#/$defs/BusinessError"
+        }
+      ]
+    },
+    "get_ingestion_usage_output": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/get_ingestion_usage_success"
+        },
+        {
+          "$ref": "#/$defs/BusinessError"
+        }
+      ]
+    }
+  }
+}

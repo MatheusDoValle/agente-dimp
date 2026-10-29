@@ -1,0 +1,938 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Agente DIMP — contrato Api.Agente",
+    "version": "1.0.0",
+    "description": "Desenho de interface, ainda nao implementado. Perfil local sem autorizacao conforme EX-001. Contrato de relatorio separado do JSON do LLM."
+  },
+  "servers": [
+    {
+      "url": "http://127.0.0.1:5080"
+    }
+  ],
+  "security": [],
+  "paths": {
+    "/api/v1/analises": {
+      "post": {
+        "operationId": "submitAnalysis",
+        "summary": "Recebe um arquivo e aceita processamento sem aguardar a analise.",
+        "description": "202 somente apos recepcao integra, persistencia da execucao e do job. Maximo de produto indefinido; limites efetivos de host documentados no perfil. Nome do arquivo nao determina caminho. Reenvio cria nova execucao.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                },
+                "required": [
+                  "file"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Execucao aceita.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Accepted"
+                }
+              }
+            },
+            "headers": {
+              "Location": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "URL relativa da consulta de status."
+              }
+            }
+          },
+          "400": {
+            "description": "Multipart ausente/invalido ou mais de um arquivo.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Limite efetivo do ambiente excedido; nao representa teto de produto aprovado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Tipo de requisicao nao suportado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Arquivo vazio ou impossivel de receber.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Persistencia/fila indisponivel; nao aceitar trabalho que seria perdido.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/analises/{executionId}": {
+      "parameters": [
+        {
+          "name": "executionId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "get": {
+        "operationId": "getAnalysisStatus",
+        "summary": "Consulta etapa e situacao.",
+        "responses": {
+          "200": {
+            "description": "Estado da execucao; nao equivale a conformidade.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExecutionStatus"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Identificador inexistente ou tombstone ja removido.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Relatorio expirado dentro do prazo de tombstone.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/analises/{executionId}/relatorio": {
+      "parameters": [
+        {
+          "name": "executionId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "get": {
+        "operationId": "getAnalysisReport",
+        "summary": "Consulta relatorio mascarado e referencias.",
+        "responses": {
+          "200": {
+            "description": "Relatorio completo ou parcial; achados completos no recurso paginado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Report"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Identificador inexistente.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Processamento ainda nao produziu relatorio.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Relatorio expirado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Execucao encerrada sem relatorio util; consultar o status.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/analises/{executionId}/achados": {
+      "parameters": [
+        {
+          "name": "executionId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "get": {
+        "operationId": "getAnalysisFindings",
+        "summary": "Consulta todos os achados mascarados por cursor.",
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100
+            }
+          }
+        ],
+        "description": "Limite 100/500 e de paginacao HTTP, nao trunca a quantidade total de achados nem define limite de arquivo. Cursor estavel vinculado a execucao; nao expor SQL nem valores originais.",
+        "responses": {
+          "200": {
+            "description": "Pagina e total de achados.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FindingsPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Cursor ou pagina invalidos.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Execucao inexistente.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Relatorio pendente.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Relatorio expirado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Execucao sem relatorio util.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Problem": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "correlationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "executionId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "correlationId",
+          "executionId"
+        ]
+      },
+      "Accepted": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "executionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "const": "recebida"
+          },
+          "statusUrl": {
+            "type": "string"
+          },
+          "reportUrl": {
+            "type": "string"
+          },
+          "acceptedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "executionId",
+          "status",
+          "statusUrl",
+          "reportUrl",
+          "acceptedAt"
+        ]
+      },
+      "Coverage": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "catalogVersion": {
+            "type": "string",
+            "description": "Versao imutavel do catalogo usado nesta execucao."
+          },
+          "applicable": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Total de instancias aplicaveis ou potencialmente obrigatorias sem aplicabilidade determinavel."
+          },
+          "passed": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Instancias avaliadas sem violacao."
+          },
+          "failed": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Instancias avaliadas com violacao comprovada."
+          },
+          "notExecuted": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Instancias nao executadas, inclusive aplicabilidade obrigatoria indeterminada."
+          },
+          "blockedBySourceConflict": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Instancias impedidas por conflito oficial, sem contagem duplicada em notExecuted."
+          }
+        },
+        "required": [
+          "catalogVersion",
+          "applicable",
+          "passed",
+          "failed",
+          "notExecuted",
+          "blockedBySourceConflict"
+        ],
+        "description": "Conta instancias unicas (ruleId, contexto/ocorrencia), nao regras distintas do catalogo. applicable = passed + failed + notExecuted + blockedBySourceConflict. Categorias exclusivas; not_applicable excluido. Aplicabilidade indeterminada de regra potencialmente obrigatoria entra em notExecuted com limitacao."
+      },
+      "ExecutionStatus": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "executionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "recebida",
+              "em_processamento",
+              "concluida",
+              "concluida_parcialmente",
+              "falhou",
+              "cancelada"
+            ]
+          },
+          "stage": {
+            "type": "string",
+            "enum": [
+              "recebimento",
+              "identificacao",
+              "validacao",
+              "recuperacao",
+              "analise",
+              "composicao",
+              "limpeza"
+            ]
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "reportAvailable": {
+            "type": "boolean"
+          },
+          "reportUrl": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "reportExpiresAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "limitationCodes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "executionId",
+          "status",
+          "stage",
+          "updatedAt",
+          "endedAt",
+          "reportAvailable",
+          "reportUrl",
+          "reportExpiresAt",
+          "limitationCodes"
+        ]
+      },
+      "Location": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "line": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1
+          },
+          "byteOffset": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "recordCode": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "fieldPosition": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1
+          },
+          "unavailableReason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "line",
+          "byteOffset",
+          "recordCode",
+          "fieldPosition",
+          "unavailableReason"
+        ]
+      },
+      "Evidence": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "sourceKind": {
+            "type": "string",
+            "enum": [
+              "manual",
+              "arquivo_mascarado",
+              "execucao"
+            ]
+          },
+          "revisionSha256": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "chunkId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "pages": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          "locator": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "text": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "sourceKind",
+          "revisionSha256",
+          "chunkId",
+          "pages",
+          "locator",
+          "text"
+        ]
+      },
+      "Finding": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "ruleId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "erro_estrutural",
+              "inconsistencia_negocio",
+              "indicio_ia",
+              "ausencia_evidencias",
+              "falha_tecnica"
+            ]
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "bloqueante",
+              "erro",
+              "aviso",
+              "informativo"
+            ]
+          },
+          "origin": {
+            "type": "string",
+            "enum": [
+              "deterministico",
+              "ia",
+              "sistema"
+            ]
+          },
+          "description": {
+            "type": "string"
+          },
+          "location": {
+            "$ref": "#/components/schemas/Location"
+          },
+          "evidenceIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "ruleId",
+          "category",
+          "severity",
+          "origin",
+          "description",
+          "location",
+          "evidenceIds"
+        ]
+      },
+      "FindingsPage": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Finding"
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor",
+          "total"
+        ]
+      },
+      "UsageSummary": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "inputTokens": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "outputTokens": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "embeddingTokens": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "hasUnknownUsage": {
+            "type": "boolean"
+          },
+          "estimatedCost": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[0-9]+(\\.[0-9]+)?$"
+          },
+          "currency": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "priceBookVersionId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "inputTokens",
+          "outputTokens",
+          "embeddingTokens",
+          "hasUnknownUsage",
+          "estimatedCost",
+          "currency",
+          "priceBookVersionId"
+        ]
+      },
+      "Report": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "contractVersion": {
+            "type": "string",
+            "const": "1.0.0"
+          },
+          "executionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "concluida",
+              "concluida_parcialmente",
+              "falhou",
+              "cancelada"
+            ]
+          },
+          "verdict": {
+            "type": "string",
+            "enum": [
+              "sem_inconsistencias_nas_regras_avaliadas",
+              "com_inconsistencias",
+              "inconclusivo",
+              "nao_suportado"
+            ]
+          },
+          "coverage": {
+            "$ref": "#/components/schemas/Coverage"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "analysis": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AnalyticContent"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "requiresHumanReview": {
+            "type": "boolean"
+          },
+          "limitationCodes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "findingsCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "findingsUrl": {
+            "type": "string"
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Evidence"
+            }
+          },
+          "usage": {
+            "$ref": "#/components/schemas/UsageSummary"
+          },
+          "endedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "contractVersion",
+          "executionId",
+          "status",
+          "verdict",
+          "coverage",
+          "summary",
+          "analysis",
+          "requiresHumanReview",
+          "limitationCodes",
+          "findingsCount",
+          "findingsUrl",
+          "evidence",
+          "usage",
+          "endedAt",
+          "expiresAt"
+        ]
+      },
+      "AnalyticContent": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "summary": {
+            "type": "string"
+          },
+          "explanations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "findingIds": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "text": {
+                  "type": "string"
+                },
+                "evidenceIds": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": [
+                "findingIds",
+                "text",
+                "evidenceIds"
+              ]
+            }
+          },
+          "indications": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "text": {
+                  "type": "string"
+                },
+                "evidenceIds": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": [
+                "text",
+                "evidenceIds"
+              ]
+            }
+          },
+          "limitations": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "requiresHumanReview": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "summary",
+          "explanations",
+          "indications",
+          "limitations",
+          "requiresHumanReview"
+        ]
+      }
+    }
+  }
+}
