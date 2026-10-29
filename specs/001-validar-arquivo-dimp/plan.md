@@ -1,9 +1,9 @@
 # Implementation Plan: Validar arquivo DIMP com análise rastreável
 
-**Branch**: main, sem commits; 001-validar-arquivo-dimp é o identificador da funcionalidade, não uma branch criada.
+**Branch**: main; base da Fase 1 publicada em 096c87d. 001-validar-arquivo-dimp e o identificador da funcionalidade.
 **Date**: 2026-10-29 | **Spec**: [spec.md](spec.md)
 **Input**: Especificação com cinco esclarecimentos, FR-001 a FR-032 e SC-001 a SC-013.
-**Status**: Desenho técnico revisado após analyze; Fase 1 concluída (bootstrap offline), com evidências em docs/validation/phase1-setup.md. Aceite funcional das jornadas ainda pendente.
+**Status**: Fases 1 e 2 concluidas; fundacao validada com PostgreSQL real. Jornadas funcionais pendentes. Ver docs/validation/phase2-foundation.md.
 **Atualização 2026-10-29**: MongoDB Atlas selecionado pelo responsável para memória do agente.
 
 ## Summary

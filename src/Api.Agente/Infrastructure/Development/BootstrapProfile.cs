@@ -9,7 +9,7 @@ public static class BootstrapProfile
             || configuration["DevelopmentProfile:Provider"] != "Fake")
         {
             throw new InvalidOperationException(
-                "Fase 1 permite somente LocalDeterministic com provider Fake e chamadas externas desabilitadas. LocalReal depende das fases seguintes.");
+                "Somente LocalDeterministic com provider Fake e chamadas externas desabilitadas esta disponivel. Os conectores LocalReal ainda nao foram implementados.");
         }
     }
 }

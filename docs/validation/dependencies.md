@@ -55,3 +55,7 @@ Fontes: [NuGet CPM](https://learn.microsoft.com/en-us/nuget/consume-packages/cen
 [MCP ASP.NET](https://www.nuget.org/packages/ModelContextProtocol.AspNetCore/2.3.0),
 [provider Npgsql](https://www.nuget.org/packages/Npgsql.EntityFrameworkCore.PostgreSQL/10.0.3),
 [pgvector EF](https://www.nuget.org/packages/Pgvector.EntityFrameworkCore/0.3.0).
+
+## Atualizacao da Fase 2
+
+Microsoft.EntityFrameworkCore.Relational e Microsoft.EntityFrameworkCore.Abstractions fixados em 10.0.12; dotnet-ef local 10.0.12. O primeiro build com DbContexts revelou MSB3277 nos projetos de teste; alinhar os transitivos resolveu o conflito sem suprimir avisos. Locks regenerados, restore locked/build aprovados. Prova real de migrations e isolamento de bancos em phase2-foundation.md; integracao SK/MCP/modelo continua pendente de US3.

@@ -1,18 +1,3 @@
-<!--
-Relatório de impacto da sincronização
-- Versão: 1.0.0 -> 1.0.1 (PATCH: correção dos validadores ao escopo DIMP confirmado).
-- Princípio alterado: P02, título preservado; validação da estrutura, dos registros
-  e das regras conforme o layout oficial DIMP e sua versão aplicável.
-- Ajustes associados: propósito e escopo, P01, fluxo 3.4, fontes 4.1 e decisão D02
-  passam a tratar os documentos DIMP por seus layouts e regras oficiais.
-- Contratos JSON do LLM e da API: requisitos preservados.
-- Seções adicionadas ou removidas: nenhuma.
-- Templates e comandos dependentes: não modificados; leem a constituição em execução.
-- Impacto: não existem especificações ou implementações de funcionalidades a migrar.
-- Pendências: D01 a D15 preservadas; nenhum placeholder aberto.
-- Este comentário é material temporário de revisão e DEVE ser removido antes do commit.
--->
-
 # Constituição do AgenteDIMP
 
 ## 1. Propósito e escopo

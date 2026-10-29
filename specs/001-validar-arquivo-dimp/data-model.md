@@ -1,6 +1,6 @@
 # Modelo de dados e ciclo de vida
 
-Data: 2026-10-29. Modelo lógico; tabelas, classes e migrações ainda não foram criadas.
+Data: 2026-10-29. Modelo logico e referencia de evolucao. A Fase 2 implementa execucoes, relatorios/evidencias, avaliacoes, ledger e migrations; fila e entidades de conhecimento completas pertencem as fases seguintes.
 Datas persistidas em UTC, cálculos por instante; apresentação pode usar America/Sao_Paulo.
 Identificadores de execução e chamadas são UUIDs gerados pelo sistema.
 

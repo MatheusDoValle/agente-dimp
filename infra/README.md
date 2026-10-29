@@ -54,3 +54,7 @@ MongoDb__DatabaseName por configuracao externa. Usar credenciais de aplicacao e
 database separado por ambiente. Nao abrir firewall, criar cluster nem liberar IP
 como efeito da inicializacao local. Autorizacao de usuarios do produto continua
 adiada em EX-001; credenciais de banco nao implementam essa autorizacao.
+
+## Testes da fundacao (Fase 2)
+
+Com containers saudaveis: ./infra/Test-Foundation.ps1 -All -NoBuild. O script configura credenciais somente no processo filho e aplica migrations explicitamente aos bancos locais dedicados. Confirmados PostgreSQL 17.11/pgvector 0.8.7 e bloqueio cruzado dos papeis. Nao executa drop/reset nem conecta a Atlas; ver docs/validation/phase2-foundation.md.

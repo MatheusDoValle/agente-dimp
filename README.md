@@ -1,24 +1,35 @@
 # Agente DIMP
 
-Projeto em C:/Infis/CursoIa/AgenteDIMP. Duas APIs ASP.NET Core/.NET 10:
-Api.Agente para orquestracao e Api.RAG para conhecimento.
-Memoria em MongoDB Atlas; acervo e vetores em PostgreSQL/pgvector.
+Duas APIs ASP.NET Core/.NET 10: Api.Agente para orquestracao e Api.RAG para conhecimento.
+Memoria prevista em MongoDB Atlas; acervo e vetores em PostgreSQL/pgvector.
+Repositorio: https://github.com/MatheusDoValle/agente-dimp
 
-Fase 1: infraestrutura e bootstrap offline. O fluxo DIMP e suas regras ainda
-nao foram implementados. Nenhum processamento fiscal ou chamada paga e executado.
+Fases 1 e 2 concluidas: infraestrutura, contratos, modelos, persistencia,
+mascaramento por execucao, ledger e finalizacao segura. O parser DIMP, os validadores
+fiscais, MCP e a analise real de IA pertencem as proximas fases.
+Nao ha endpoint funcional de analise ou chamada paga ativo.
 
-## Verificar
+## Compilar e testar sem banco
 
 ~~~powershell
 dotnet restore ./AgenteDIMP.slnx --locked-mode
+dotnet tool restore
 dotnet build ./AgenteDIMP.slnx --no-restore
-dotnet test ./AgenteDIMP.slnx --no-build --filter 'Category!=LiveProvider'
+dotnet test ./AgenteDIMP.slnx --no-build --filter 'Category!=Database&Category!=LiveProvider'
 ~~~
 
-SDK fixado em global.json; dependencias centralizadas e arquivos packages.lock.json
-versionados. Ver [dependencias](docs/validation/dependencies.md),
-[configuracao](docs/configuration.md), [infraestrutura](infra/README.md) e
-[tarefas](specs/001-validar-arquivo-dimp/tasks.md).
+## Executar todos os testes locais
+
+~~~powershell
+if (-not (Test-Path ./infra/.env)) { ./infra/New-LocalEnvironment.ps1 }
+docker compose --env-file ./infra/.env -f ./infra/compose.yaml up -d --wait
+./infra/Test-Foundation.ps1 -All -NoBuild
+~~~
+
+A suite usa os bancos/papeis locais dedicados agente/rag, aplica migrations
+explicitamente e nao apaga bancos/volumes. O script configura credenciais somente
+no processo de teste, sem exibi-las. Testes Database exigem os containers;
+LiveProvider continua separado e nenhuma chamada OpenAI real foi executada.
 
 ## Iniciar offline
 
@@ -29,5 +40,11 @@ dotnet run --project ./src/Api.RAG --launch-profile LocalDeterministic
 dotnet run --project ./src/Api.Agente --launch-profile LocalDeterministic
 ~~~
 
-Consultar /health/live nas portas 5081 e 5080. Docker e credenciais nao sao
-necessarios para o bootstrap. LocalReal esta reservado e e recusado nesta fase.
+Consultar /health/live em 127.0.0.1:5081 e 127.0.0.1:5080.
+O bootstrap HTTP continua iniciando sem banco/chave; os repositorios so conectam
+quando usados. LocalReal permanece reservado ate a implementacao dos conectores.
+
+Ver [configuracao](docs/configuration.md), [infraestrutura](infra/README.md),
+[dependencias](docs/validation/dependencies.md),
+[evidencia da Fase 2](docs/validation/phase2-foundation.md) e
+[tarefas](specs/001-validar-arquivo-dimp/tasks.md).
