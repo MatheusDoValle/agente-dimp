@@ -32,6 +32,12 @@ Repositório Oficial: https://github.com/MatheusDoValle/agente-dimp
    - `ExecutionTombstone` mantido por 90 dias após expiração (durante os quais retorna `410 Gone`; após expurgo do tombstone passa a retornar `404 Not Found`).
    - Limpeza e recuperação garantida de arquivos temporários e contexto MongoDB (`ArtifactRecoveryWorker`).
 
+5. **Integração SOFIA A2A e CORS (Feature 002):**
+   - Servidor padronizado **Agent2Agent (A2A) v0.3.x JSON-RPC 2.0** no endpoint `POST /a2a`.
+   - Publicação de **Agent Card** para descoberta automática em `GET /.well-known/agent-card.json`.
+   - Contrato de domínio **SOFIA v1.0** com validação de conformidade DIMP via `SofiaAnalysisHandler`.
+   - Política de **CORS** (`SofiaBrowser`) com suporte a preflight `OPTIONS` para origens web autorizadas.
+
 ---
 
 ## 2. Compilação e Execução de Testes
@@ -43,14 +49,15 @@ dotnet restore ./AgenteDIMP.slnx --locked-mode
 dotnet build ./AgenteDIMP.slnx --no-restore
 ```
 
-### 2.2 Executar Testes Unitários (Offline, sem Dependências Externas)
+### 2.2 Executar Testes Unitários e de Integração A2A (Offline)
 
 ```powershell
 dotnet test ./tests/Api.Agente.UnitTests/Api.Agente.UnitTests.csproj
 dotnet test ./tests/Api.RAG.UnitTests/Api.RAG.UnitTests.csproj
+dotnet test ./tests/AgenteDIMP.IntegrationTests/AgenteDIMP.IntegrationTests.csproj --filter "FullyQualifiedName~A2AIntegrationTests"
 ```
 
-Total: **216+ testes aprovados, 0 falhas, 0 ignorados**.
+Total: **230+ testes aprovados, 0 falhas, 0 ignorados**.
 
 ### 2.3 Executar Testes de Integração com Banco Local
 
@@ -93,4 +100,5 @@ Verificar integridade dos serviços:
 - [Evidência US4 - Custos, Ledger e Retenção](docs/validation/us4-audit-retention.md)
 - [Linha de Base de Desempenho](docs/validation/performance-baseline.md)
 - [Configuração de Ambientes e Operação](docs/configuration.md)
+- [Evidência de Integração SOFIA A2A e CORS](docs/validation/sofia-a2a-integration.md)
 - [Prontidão para Liberação (Release Readiness)](docs/validation/release-readiness.md)

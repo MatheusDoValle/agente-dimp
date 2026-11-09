@@ -17,7 +17,10 @@ public partial class Program
 
         var app = builder.Build();
         app.UseRedactedTelemetry();
+        app.UseCors("SofiaBrowser");
         app.MapBootstrapEndpoints();
+        app.MapAgentCardEndpoint();
+        app.MapA2AEndpoint();
         app.MapSubmitAnalysis();
         app.MapGetAnalysisStatus();
         app.MapGetAnalysisReport();

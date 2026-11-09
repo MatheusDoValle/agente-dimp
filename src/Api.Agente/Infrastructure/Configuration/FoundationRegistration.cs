@@ -81,10 +81,30 @@ public static class FoundationRegistration
         services.AddScoped<IReportStore, ReportStore>();
         services.AddScoped<BuildExecutionReport>();
         services.AddScoped<SubmitAnalysisService>();
+        services.AddSingleton<Api.Agente.Domain.Validation.IDimpParser, Api.Agente.Domain.Validation.DimpParser>();
+        services.AddSingleton<Api.Agente.Domain.Validation.DimpValidationEngine>();
+        services.AddScoped<Api.Agente.Application.Sofia.ISofiaAnalysisHandler, Api.Agente.Application.Sofia.SofiaAnalysisHandler>();
         services.AddHostedService<AnalysisWorker>();
         services.AddHostedService<RetentionWorker>();
         services.AddHostedService<UsageRetentionWorker>();
         services.AddHostedService<ArtifactRecoveryWorker>();
+
+        var allowedOrigins = configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+            ?? new[] { "http://localhost:4200", "http://localhost:5173" };
+
+        services.AddCors(options =>
+        {
+            options.AddPolicy("SofiaBrowser", policy =>
+            {
+                if (allowedOrigins.Length > 0)
+                {
+                    policy.WithOrigins(allowedOrigins)
+                          .WithMethods("GET", "POST", "OPTIONS")
+                          .WithHeaders("Content-Type", "Authorization");
+                }
+            });
+        });
+
         services.ConfigureHttpJsonOptions(options =>
         {
             options.SerializerOptions.PropertyNamingPolicy = ContractJson.Options.PropertyNamingPolicy;

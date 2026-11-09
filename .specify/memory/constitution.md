@@ -206,6 +206,23 @@ divergências entre intenção, implementação e evidência.
 aplicáveis e cumprir a Definition of Done. Requisitos sem evidência DEVEM permanecer
 abertos, com impacto declarado.
 
+### P14. Interoperabilidade padronizada via A2A e Contrato SOFIA
+
+**Regra.** A integração com o orquestrador SOFIA da INFIS DEVE seguir o protocolo
+Agent2Agent (A2A v0.3.x) sobre JSON-RPC 2.0 (`message/send` com `TextPart`), publicar o
+Agent Card em `/.well-known/agent-card.json` com suas capacidades e expor a análise estritamente
+sob o contrato pactuado `versaoContrato = "1.0"`. Os identificadores de correlação (`idExecucao`
+e `idSolicitacao`) DEVEM ser propagados identicamente na resposta. Documentos recebidos
+DEVEM ser tratados como texto não confiável (prevenção contra prompt injection). Políticas
+de CORS (`SofiaBrowser`) DEVEM restringir acesso apenas às origens de frontend autorizadas,
+sem afrouxar a autenticação nem confundir tráfego servidor-servidor com tráfego de navegador.
+
+**Justificativa.** A interoperabilidade entre agentes no ecossistema SOFIA exige rigor de
+contrato, isolamento de segurança e rastreabilidade ponta a ponta sem dependência de endpoints ad hoc.
+
+**Verificação.** Testes automatizados de contrato DEVEM cobrir requisição, resposta com `Task completed`
+e `Artifact`, preflight OPTIONS de CORS e rejeição de payloads com versões ou formatos inválidos.
+
 ## 3. Restrições arquiteturais
 
 ### 3.1. Api.Agente
@@ -415,7 +432,7 @@ a data da última alteração DEVE refletir cada modificação, ambas em formato
 Este documento define obrigações de desenvolvimento. NÃO DEVE ser usado para declarar
 conclusão de funcionalidades, validação de documentos ou aprovação de decisões pendentes.
 
-**Versão**: 1.0.1 | **Ratificada em**: 2026-10-29 | **Última alteração**: 2026-10-29
+**Versão**: 1.1.0 | **Ratificada em**: 2026-10-29 | **Última alteração**: 2026-11-09
 
 ## 9. Decisões pendentes
 
@@ -434,7 +451,7 @@ Cada uma DEVE ser resolvida no artefato e na etapa indicados antes do trabalho d
 | D08 | Catálogo de ferramentas, contratos, autorizações, efeitos externos e políticas de execução. | Especificação e esclarecimentos; contratos e testes no plano. |
 | D09 | MongoDB ou Redis para memória e os limites de retenção, exclusão e histórico. | ADR e plano técnico, antes da implementação da memória. |
 | D10 | Organização dos dados de consumo em PostgreSQL, precificação, ausência de métricas e falhas de registro. | Plano técnico e ADR quando relevante; contratos de dados e verificações. |
-| D11 | Contratos MCP e A2A, descoberta, autenticação, autorização e marco de entrega A2A. | Escopo na especificação; contratos, decisões e testes no plano. |
+| D11 | Contratos MCP e A2A, descoberta, autenticação, autorização e marco de entrega A2A. | Resolvida: MCP na Feature 001; A2A v0.3.x, Agent Card e CORS na Feature 002. |
 | D12 | Identidade dos usuários, organizações aplicáveis, dados sensíveis e política de envio ao provedor. | Especificação e esclarecimentos; controles, retenção e exclusão no plano. |
 | D13 | Hospedagem, componentes adicionais, SDKs, topologia e mecanismo de fornecimento de segredos. | Plano técnico e ADRs relevantes, sem alterar as restrições constitucionais. |
 | D14 | Conjuntos de avaliação, metas de qualidade, desempenho e custo e critérios de aceite operacional. | Requisitos na especificação; procedimento e evidências no plano e na validação. |
