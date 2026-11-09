@@ -28,7 +28,7 @@ public sealed class FoundationDatabaseFixture : IAsyncLifetime
     public string RagConnection { get; } = ReadLocalConnection("DIMP_TEST_RAG_CONNECTION", "rag", "rag_app");
     public AgentDbContext CreateAgent(ContentSanitizer? sanitizer = null) =>
         new(new DbContextOptionsBuilder<AgentDbContext>().UseNpgsql(AgentConnection).Options, sanitizer);
-    public KnowledgeDbContext CreateRag() => new(new DbContextOptionsBuilder<KnowledgeDbContext>().UseNpgsql(RagConnection).Options);
+    public KnowledgeDbContext CreateRag() => new(new DbContextOptionsBuilder<KnowledgeDbContext>().UseNpgsql(RagConnection, o => o.UseVector()).Options);
 
     public async Task InitializeAsync()
     {

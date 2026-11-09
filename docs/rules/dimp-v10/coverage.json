@@ -1,0 +1,77 @@
+{
+  "catalogVersion": "0.1.0",
+  "revisionSha256": "FE5610AF2429C718B59FFFD18BECBA40C9C0697CBF02DA6A3236465FA994ED0A",
+  "generatedAt": "2026-11-05T12:38:00Z",
+  "coverageStatus": "partial_honest_coverage_pending_official_source_resolution",
+  "sourceConflicts": [
+    {
+      "id": "SF-001",
+      "record": "0000",
+      "field": 4,
+      "status": "blocked_by_source_conflict",
+      "ruleId": "DIMP10.R0000.F04.FINALIDADE_9",
+      "reason": "Finalidade 9 sem especificacao de aceitacao no manual oficial CONFAZ V10."
+    },
+    {
+      "id": "SF-002",
+      "record": "1120",
+      "field": 14,
+      "status": "blocked_by_source_conflict",
+      "ruleId": "DIMP10.R1120.F14.COD_MUN_DEST",
+      "reason": "COD_MUN_DEST possui regra divergente entre texto e tabela em operacoes interestaduais."
+    },
+    {
+      "id": "SF-003",
+      "record": "1115",
+      "field": 12,
+      "status": "blocked_by_source_conflict",
+      "ruleId": "DIMP10.R1115.F12.IND_TP_PIX",
+      "reason": "IND_TP_PIX possui regra de preenchimento conflitante com modalidade de liquidacao."
+    }
+  ],
+  "records": {
+    "total": 29,
+    "implemented": 29,
+    "validators": [
+      "Record0000Validator",
+      "Record0001Validator",
+      "Record0002Validator",
+      "Record0005Validator",
+      "Record0006Validator",
+      "Record0100Validator",
+      "Record0105Validator",
+      "Record0109Validator",
+      "Record0200Validator",
+      "Record0201Validator",
+      "Record0209Validator",
+      "Record0300Validator",
+      "Record0600Validator",
+      "Record0700Validator",
+      "Record0990Validator",
+      "Record1001Validator",
+      "Record1100Validator",
+      "Record1110Validator",
+      "Record1115Validator",
+      "Record1120Validator",
+      "Record1200Validator",
+      "Record1220Validator",
+      "Record1500Validator",
+      "Record1600Validator",
+      "Record1990Validator",
+      "Record9001Validator",
+      "Record9900Validator",
+      "Record9990Validator",
+      "Record9999Validator"
+    ]
+  },
+  "fields": {
+    "total": 199,
+    "mapped": 199
+  },
+  "testExecution": {
+    "totalPassing": 207,
+    "failed": 0,
+    "unitTests": 169,
+    "integrationTests": 38
+  }
+}

@@ -151,6 +151,25 @@ namespace Api.Agente.Infrastructure.Persistence.Migrations
                     b.ToTable("evidence", "agente");
                 });
 
+            modelBuilder.Entity("Api.Agente.Domain.Reports.ExecutionTombstone", b =>
+                {
+                    b.Property<Guid>("ExecutionId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("ExpiredAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("PurgeAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("ExecutionId");
+
+                    b.HasIndex("PurgeAt");
+
+                    b.ToTable("execution_tombstones", "agente");
+                });
+
             modelBuilder.Entity("Api.Agente.Domain.Reports.Report", b =>
                 {
                     b.Property<Guid>("ExecutionId")
@@ -257,6 +276,87 @@ namespace Api.Agente.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("rule_evaluations", "agente");
+                });
+
+            modelBuilder.Entity("Api.Agente.Infrastructure.Jobs.ProcessingJob", b =>
+                {
+                    b.Property<Guid>("ExecutionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("AttemptNumber")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("AvailableAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CheckpointData")
+                        .HasColumnType("text");
+
+                    b.Property<int>("CheckpointVersion")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<long>("FencingToken")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTimeOffset?>("HeartbeatAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("LeaseExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("LeaseOwner")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Stage")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("ExecutionId");
+
+                    b.HasIndex("Status", "AvailableAt", "LeaseExpiresAt");
+
+                    b.ToTable("processing_jobs", "agente");
+                });
+
+            modelBuilder.Entity("Api.Agente.Infrastructure.Usage.PriceBookVersion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("QueriedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Unit")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("ValidFrom")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("ValidTo")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("price_books", "agente");
                 });
 
             modelBuilder.Entity("Api.Agente.Infrastructure.Usage.ProviderCallAttempt", b =>
@@ -424,6 +524,63 @@ namespace Api.Agente.Infrastructure.Persistence.Migrations
                         .HasForeignKey("ExecutionId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("Api.Agente.Infrastructure.Jobs.ProcessingJob", b =>
+                {
+                    b.HasOne("Api.Agente.Domain.Execution", null)
+                        .WithOne()
+                        .HasForeignKey("Api.Agente.Infrastructure.Jobs.ProcessingJob", "ExecutionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Api.Agente.Infrastructure.Usage.PriceBookVersion", b =>
+                {
+                    b.OwnsMany("Api.Agente.Infrastructure.Usage.PriceBookRate", "Rates", b1 =>
+                        {
+                            b1.Property<Guid>("PriceBookId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<int>("Id")
+                                .ValueGeneratedOnAdd()
+                                .HasColumnType("integer");
+
+                            NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b1.Property<int>("Id"));
+
+                            b1.Property<decimal?>("CachedPricePerMillion")
+                                .HasPrecision(28, 12)
+                                .HasColumnType("numeric(28,12)");
+
+                            b1.Property<decimal?>("EmbeddingPricePerMillion")
+                                .HasPrecision(28, 12)
+                                .HasColumnType("numeric(28,12)");
+
+                            b1.Property<decimal?>("InputPricePerMillion")
+                                .HasPrecision(28, 12)
+                                .HasColumnType("numeric(28,12)");
+
+                            b1.Property<string>("Model")
+                                .IsRequired()
+                                .HasColumnType("text");
+
+                            b1.Property<decimal?>("OutputPricePerMillion")
+                                .HasPrecision(28, 12)
+                                .HasColumnType("numeric(28,12)");
+
+                            b1.Property<string>("Provider")
+                                .IsRequired()
+                                .HasColumnType("text");
+
+                            b1.HasKey("PriceBookId", "Id");
+
+                            b1.ToTable("price_book_rates", "agente");
+
+                            b1.WithOwner()
+                                .HasForeignKey("PriceBookId");
+                        });
+
+                    b.Navigation("Rates");
                 });
 #pragma warning restore 612, 618
         }

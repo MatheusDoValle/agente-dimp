@@ -1,0 +1,343 @@
+{
+  "version": "0.1.0",
+  "revisionSha256": "FE5610AF2429C718B59FFFD18BECBA40C9C0697CBF02DA6A3236465FA994ED0A",
+  "productMaxBytes": null,
+  "oracle": "Expectativas escritas a partir de S01 e do contrato REST; nao produzidas por parser/validador da aplicacao.",
+  "cases": [
+    {
+      "id": "zerado-sintetico",
+      "path": "zerado-sintetico.dimp",
+      "bytes": 410,
+      "sha256": "BA6B1CDD76883BA0BECD4388E152D722F3313F856E705216EFC0BB2FCA1769E2",
+      "lineCount": 19,
+      "scope": "candidate_zero_file",
+      "fiscalConformity": "not_claimed",
+      "expectation": {
+        "result": "candidate_valid",
+        "sourcePages": [
+          3,
+          11,
+          31,
+          56,
+          57,
+          58
+        ],
+        "notes": "Totais manuais: bloco0=4; bloco1=2; bloco9 incluindo 9999=13; arquivo=19; dez linhas 9900. Nao equivale a aceite fiscal integral."
+      }
+    },
+    {
+      "id": "v09-nao-suportada",
+      "path": "v09-nao-suportada.dimp",
+      "bytes": 410,
+      "sha256": "1209AC5953137F37FC5D3B03F78AC0BBCE5CC2F57C5EFFF99F4C6737C0C4C6FD",
+      "lineCount": 19,
+      "scope": "parser_fragment",
+      "fiscalConformity": "not_claimed",
+      "expectation": {
+        "result": "not_supported",
+        "sourcePages": [
+          10
+        ],
+        "notes": "Nao ativar regras V10 como fallback."
+      }
+    },
+    {
+      "id": "campos-vazios",
+      "path": "campos-vazios.dimp",
+      "bytes": 36,
+      "sha256": "3430EA62193F55DCDA8F66F89298BF0F50720E6C2E5AB62D712A2D1D995FDC5E",
+      "lineCount": 1,
+      "scope": "parser_fragment",
+      "fiscalConformity": "not_claimed",
+      "expectation": {
+        "result": "physical_observation",
+        "sourcePages": [
+          3
+        ],
+        "notes": "Observar fatos sem normalizacao; diagnostico de violacao sera aplicado por validador rastreado."
+      }
+    },
+    {
+      "id": "somente-lf",
+      "path": "somente-lf.dimp",
+      "bytes": 18,
+      "sha256": "2385C07B69580D4F399DC7B5B0587689A4A0F6998B5DE3B5E8369CEFC26BE386",
+      "lineCount": 2,
+      "scope": "parser_fragment",
+      "fiscalConformity": "not_claimed",
+      "expectation": {
+        "result": "physical_observation",
+        "sourcePages": [
+          3
+        ],
+        "notes": "Observar fatos sem normalizacao; diagnostico de violacao sera aplicado por validador rastreado."
+      }
+    },
+    {
+      "id": "sem-terminador",
+      "path": "sem-terminador.dimp",
+      "bytes": 8,
+      "sha256": "5737D060C51C734DCC5280B95A9088EE35B15614C66E3088A9B6C36D2DE946EE",
+      "lineCount": 1,
+      "scope": "parser_fragment",
+      "fiscalConformity": "not_claimed",
+      "expectation": {
+        "result": "physical_observation",
+        "sourcePages": [
+          3
+        ],
+        "notes": "Observar fatos sem normalizacao; diagnostico de violacao sera aplicado por validador rastreado."
+      }
+    },
+    {
+      "id": "sem-pipe-inicial",
+      "path": "sem-pipe-inicial.dimp",
+      "bytes": 9,
+      "sha256": "BBF93CA5C72EC2F1AE2EABFA0AD46E2DBCB5527B5D3D4654F066D0C2110BC690",
+      "lineCount": 1,
+      "scope": "parser_fragment",
+      "fiscalConformity": "not_claimed",
+      "expectation": {
+        "result": "physical_observation",
+        "sourcePages": [
+          3
+        ],
+        "notes": "Observar fatos sem normalizacao; diagnostico de violacao sera aplicado por validador rastreado."
+      }
+    },
+    {
+      "id": "sem-pipe-final",
+      "path": "sem-pipe-final.dimp",
+      "bytes": 9,
+      "sha256": "9C84DB41534D0FB6BEB66CA2AFB216D8A811BB2C9CD4FE3AC6CD3D089AC8D9EC",
+      "lineCount": 1,
+      "scope": "parser_fragment",
+      "fiscalConformity": "not_claimed",
+      "expectation": {
+        "result": "physical_observation",
+        "sourcePages": [
+          3
+        ],
+        "notes": "Observar fatos sem normalizacao; diagnostico de violacao sera aplicado por validador rastreado."
+      }
+    },
+    {
+      "id": "espacos-preservados",
+      "path": "espacos-preservados.dimp",
+      "bytes": 13,
+      "sha256": "45281784428519EF67F9F4967DBCFA0E354F450C9A81F34AD90BE6B32ACED195",
+      "lineCount": 1,
+      "scope": "parser_fragment",
+      "fiscalConformity": "not_claimed",
+      "expectation": {
+        "result": "physical_observation",
+        "sourcePages": [
+          3
+        ],
+        "notes": "Observar fatos sem normalizacao; diagnostico de violacao sera aplicado por validador rastreado."
+      }
+    },
+    {
+      "id": "bom-utf8",
+      "path": "bom-utf8.dimp",
+      "bytes": 13,
+      "sha256": "7628DC3702F5AA7CD76FC13F05F95D67BDDF9F347A7A7EF1EB87D94230AAD1D4",
+      "lineCount": 1,
+      "scope": "parser_fragment",
+      "fiscalConformity": "not_claimed",
+      "expectation": {
+        "result": "physical_observation",
+        "sourcePages": [
+          3
+        ],
+        "notes": "Observar fatos sem normalizacao; diagnostico de violacao sera aplicado por validador rastreado."
+      }
+    },
+    {
+      "id": "filho-orfao",
+      "path": "filho-orfao.dimp",
+      "bytes": 104,
+      "sha256": "E89F23737E197AAE6A431B4C7B9F1890DADF0D0D5CEFEEFF925D9855EC4D4F0B",
+      "lineCount": 2,
+      "scope": "parser_fragment",
+      "fiscalConformity": "not_claimed",
+      "expectation": {
+        "result": "failed",
+        "sourcePages": [
+          8,
+          37
+        ],
+        "notes": "1115 hierarquia4 exige contexto1110/1100; fragmento intencional."
+      }
+    },
+    {
+      "id": "vazio",
+      "path": "vazio.dimp",
+      "bytes": 0,
+      "sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+      "lineCount": 0,
+      "scope": "parser_fragment",
+      "fiscalConformity": "not_claimed",
+      "expectation": {
+        "result": "unprocessable_upload",
+        "sourcePages": [],
+        "notes": "Contrato REST 422; nao e regra fiscal."
+      }
+    },
+    {
+      "id": "sf001-finalidade9",
+      "path": "sf001-finalidade9.dimp",
+      "bytes": 68,
+      "sha256": "D3795A43B2B22277EBA9D29533933B3BB5E7EC552706CA3B3DF88AD3CCAA49A7",
+      "lineCount": 1,
+      "scope": "parser_fragment",
+      "fiscalConformity": "not_claimed",
+      "expectation": {
+        "result": "blocked_by_source_conflict",
+        "sourcePages": [
+          5,
+          10,
+          12
+        ],
+        "conflictId": "SF-001"
+      }
+    },
+    {
+      "id": "sf002-municipio7",
+      "path": "sf002-municipio7.dimp",
+      "bytes": 39,
+      "sha256": "89D52E7D7F15F4B6519095E1EF31113DE6E91B348A6AB94E0F8A9F65EC467B88",
+      "lineCount": 1,
+      "scope": "parser_fragment",
+      "fiscalConformity": "not_claimed",
+      "expectation": {
+        "result": "blocked_by_source_conflict",
+        "sourcePages": [
+          43,
+          44
+        ],
+        "conflictId": "SF-002"
+      }
+    },
+    {
+      "id": "sf002-municipio8",
+      "path": "sf002-municipio8.dimp",
+      "bytes": 40,
+      "sha256": "6BA9F1EE93BEBCDBF4BAE8B942881C674E437D8200A7535B07B6FB0F9E7BDF5A",
+      "lineCount": 1,
+      "scope": "parser_fragment",
+      "fiscalConformity": "not_claimed",
+      "expectation": {
+        "result": "blocked_by_source_conflict",
+        "sourcePages": [
+          43,
+          44
+        ],
+        "conflictId": "SF-002"
+      }
+    },
+    {
+      "id": "sf003-pix12-vazio",
+      "path": "sf003-pix12-vazio.dimp",
+      "bytes": 37,
+      "sha256": "6FF70728E92F5F38B1E893AF377C9E1CDDA9083D79DD635090AF855F42A8C561",
+      "lineCount": 1,
+      "scope": "parser_fragment",
+      "fiscalConformity": "not_claimed",
+      "expectation": {
+        "result": "blocked_by_source_conflict",
+        "sourcePages": [
+          41
+        ],
+        "conflictId": "SF-003"
+      }
+    },
+    {
+      "id": "sf003-pix12-preenchido",
+      "path": "sf003-pix12-preenchido.dimp",
+      "bytes": 40,
+      "sha256": "841040CD38E92AA826101826259BD4F62554146A448AD932E8EA08F2C7DA843C",
+      "lineCount": 1,
+      "scope": "parser_fragment",
+      "fiscalConformity": "not_claimed",
+      "expectation": {
+        "result": "blocked_by_source_conflict",
+        "sourcePages": [
+          41
+        ],
+        "conflictId": "SF-003"
+      }
+    },
+    {
+      "id": "decimal-com-ponto",
+      "path": "decimal-com-ponto.dimp",
+      "bytes": 36,
+      "sha256": "01789F41C1C0FAEFC5C4A6695ED3EF92F5917AE58D930BC16944567C0759F3C4",
+      "lineCount": 1,
+      "scope": "parser_fragment",
+      "fiscalConformity": "not_claimed",
+      "expectation": {
+        "result": "failed",
+        "sourcePages": [
+          3
+        ],
+        "ruleIds": [
+          "DIMP10.FILE.DECIMAL"
+        ]
+      }
+    },
+    {
+      "id": "data-invalida",
+      "path": "data-invalida.dimp",
+      "bytes": 410,
+      "sha256": "92D293E2275D6ABAF3622D95FDBD6E093C6492F081F3FF8C00DDF2C4C2FF72B3",
+      "lineCount": 19,
+      "scope": "parser_fragment",
+      "fiscalConformity": "not_claimed",
+      "expectation": {
+        "result": "failed",
+        "sourcePages": [
+          3,
+          12
+        ],
+        "ruleIds": [
+          "DIMP10.FILE.DATE"
+        ]
+      }
+    },
+    {
+      "id": "nome-vazio",
+      "path": "nome-vazio.dimp",
+      "bytes": 389,
+      "sha256": "4CC63DD01B18894DF535BB035814C9F7F6DB091BF0FA526187877815B357E5CB",
+      "lineCount": 19,
+      "scope": "parser_fragment",
+      "fiscalConformity": "not_claimed",
+      "expectation": {
+        "result": "failed",
+        "sourcePages": [
+          10
+        ],
+        "ruleIds": [
+          "DIMP10.0000.F06.TABLE"
+        ]
+      }
+    },
+    {
+      "id": "finalidade4-movimento",
+      "path": "finalidade4-movimento.dimp",
+      "bytes": 410,
+      "sha256": "6075DC40CFD22D2DD17283D37A05628CC4FE798D360AE8494A0DAE2274A19578",
+      "lineCount": 19,
+      "scope": "parser_fragment",
+      "fiscalConformity": "not_claimed",
+      "expectation": {
+        "result": "failed",
+        "sourcePages": [
+          31
+        ],
+        "notes": "1001 IND_MOV=0 para finalidade 4."
+      }
+    }
+  ]
+}

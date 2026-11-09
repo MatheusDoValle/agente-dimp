@@ -1,6 +1,7 @@
 using Api.RAG.Endpoints;
 using Api.RAG.Infrastructure.Configuration;
 using Api.RAG.Infrastructure.Development;
+using Api.RAG.Infrastructure.Mcp;
 using Api.RAG.Infrastructure.Observability;
 
 namespace Api.RAG;
@@ -18,6 +19,8 @@ public partial class Program
         var app = builder.Build();
         app.UseRedactedTelemetry();
         app.MapBootstrapEndpoints();
+        app.MapDocumentIngestionEndpoints();
+        app.MapMcpEndpoint();
         app.Run();
     }
 }

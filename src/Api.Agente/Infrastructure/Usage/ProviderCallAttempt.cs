@@ -97,6 +97,14 @@ public sealed class ProviderCallAttempt
     internal void Fail(DateTimeOffset endedAt, bool cancelled) =>
         Finish(cancelled ? AttemptStatus.Cancelled : AttemptStatus.Unknown, endedAt);
 
+    public void ApplyCostEstimate(CostEstimateResult estimate)
+    {
+        EstimatedCost = estimate.EstimatedCost;
+        Currency = estimate.Currency;
+        PriceBookVersionId = estimate.PriceBookVersionId;
+        EstimateStatus = estimate.EstimateStatus;
+    }
+
     private void Finish(AttemptStatus status, DateTimeOffset endedAt)
     {
         var utc = endedAt.ToUniversalTime();

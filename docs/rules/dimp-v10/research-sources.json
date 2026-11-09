@@ -1,0 +1,45 @@
+{
+  "sources": [
+    {
+      "id": "a16",
+      "url": "https://www.confaz.fazenda.gov.br/legislacao/arquivo-manuais/a16___anexo_iv_dimp_v10.pdf",
+      "sha256": "FE5610AF2429C718B59FFFD18BECBA40C9C0697CBF02DA6A3236465FA994ED0A",
+      "consultedAt": "2026-11-05T03:05:27.596812+00:00",
+      "adopted": true,
+      "purpose": "Comparacao documental; nunca substituir S01 automaticamente."
+    },
+    {
+      "id": "a19",
+      "url": "https://www.confaz.fazenda.gov.br/legislacao/arquivo-manuais/a19-anexo-ii-dimp-v10.pdf",
+      "sha256": "8EF5C63BBA3EFB1C49D3B5048BC7A89F678F682CD233789F8341FEE8A749622D",
+      "consultedAt": "2026-11-05T03:05:27.602811+00:00",
+      "adopted": false,
+      "purpose": "Comparacao documental; nunca substituir S01 automaticamente."
+    },
+    {
+      "id": "a06",
+      "url": "https://www.confaz.fazenda.gov.br/legislacao/arquivo-manuais/a06___anexo_ii___dimp_v10.pdf",
+      "sha256": "74CBF92D53B855AFA8EE0D2BFD43D6FE25BE112D9BCE782F320654F0DA76C8F4",
+      "consultedAt": "2026-11-05T03:05:27.609914+00:00",
+      "adopted": false,
+      "purpose": "Comparacao documental; nunca substituir S01 automaticamente."
+    },
+    {
+      "id": "historico",
+      "url": "https://www.confaz.fazenda.gov.br/legislacao/arquivo-manuais/dimphistricodealteracoes.pdf",
+      "sha256": "BFD01CE5213E267CF88C49CA7DA985ADF1B5DC5DE80DAE36F845F14CCCAE609B",
+      "consultedAt": "2026-11-05T03:05:27.615909+00:00",
+      "adopted": false,
+      "purpose": "Comparacao documental; nunca substituir S01 automaticamente."
+    }
+  ],
+  "searchQueries": [
+    "site:confaz.fazenda.gov.br DIMP COD_FIN 9",
+    "site:gov.br DIMP COD_MUN_DEST retificacao",
+    "site:gov.br DIMP IND_TP_PIX natureza 12 esclarecimento"
+  ],
+  "additionalConsultedUrls": [
+    "https://atendimento.receita.rs.gov.br/validador-ted-tef"
+  ],
+  "result": "No applicable official resolution found for SF-001/002/003; absence of search results is not proof of nonexistence."
+}

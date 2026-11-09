@@ -1,90 +1,94 @@
-# Configuracao de desenvolvimento
+# Configuração e Operação da Solução
 
-Fases 1/2 concluidas. A fundacao implementa contratos, persistencia, privacidade,
-ledger e finalizacao; recebimento funcional, parser DIMP, validadores, MCP e
-conectores OpenAI/MongoDB da jornada ainda dependem das fases seguintes.
+Todas as quatro jornadas (US1, US2, US3 e US4) estão implementadas e integradas no .NET 10.
+Este documento descreve as opções de configuração, execução local, bancos de dados, comunicação MCP e políticas de retenção.
 
-## LocalDeterministic
+---
 
-~~~powershell
-dotnet run --project ./src/Api.RAG --launch-profile LocalDeterministic
-dotnet run --project ./src/Api.Agente --launch-profile LocalDeterministic
-~~~
+## 1. Perfis de Execução
 
-/health/live em 127.0.0.1:5081 e :5080 confirma apenas bootstrap_only.
-Os doubles retornam analise sintetica e vetor SHA-256 de 1536 dimensoes,
-perfil local-fake-sha256-v1. Nao ha qualidade semantica ou conformidade fiscal.
-Sem chaves/banco obrigatorios para iniciar o host; repositorios exigem configuracao
-ao serem resolvidos, sem conexao automatica por health check.
+### 1.1 LocalDeterministic (Modo Offline Padrão)
 
-T014 valida no startup deadline/timeout positivos finitos, timeout dentro do deadline,
-modelos tecnicos e budgets de tokens/chamadas nao negativos (positivos no modo externo),
-1..3 tentativas transitórias totais e 0..1 reparo semantico. O perfil offline usa
-120s/30s, zero chamadas e zero tokens. Isso nao e SLA nem limite de tamanho de arquivo.
-O loop real de retentativas pertence a T110; nao foi ativado por definir estas opcoes.
+Permite desenvolvimento, testes automatizados e validação ponta a ponta sem chaves externas de IA:
 
-## Contexto e temporarios
+```powershell
+dotnet run --project ./src/Api.RAG --launch-profile LocalDeterministic -- --urls http://127.0.0.1:5081
+dotnet run --project ./src/Api.Agente --launch-profile LocalDeterministic -- --urls http://127.0.0.1:5080
+```
 
-ExecutionContext__OperatorId e ExecutionContext__ContextId sao aliases tecnicos do
-host, sem e-mail/CPF/CNPJ. O perfil local usa local-operator/local-development;
-configurar o operador antes da primeira submissao funcional.
-IdentityAssurance=unverified_local_configuration e obrigatorio. UUIDs/correlacao e
-datas UTC sao gerados pelo sistema; o snapshot copia somente campos permitidos,
-sem connection strings ou API keys. Login/autorizacao continuam adiados em EX-001.
+- Endpoint de saúde: `GET /health/live` em cada porta (`:5081` e `:5080`).
+- Embeddings offline determinísticos baseados em hash SHA-256 e dimensão 1536.
+- Cliente de análise offline com geração de explicações a partir das evidências reais extraídas do manual oficial CONFAZ.
+- Orçamentos de tokens e chamadas respeitados.
 
-TemporaryStorage__RootPath e opcional; padrao .local/temporary no content root
-da Api.Agente, fora de wwwroot. Raiz local dedicada, diretorios/nomes por UUID,
-ACL do usuario do processo no Windows e modo 0700 no Linux (host Linux ainda nao validado).
-Originais, indices/sidecars, manifesto e mapa ficam nessa area privada e nao integram
-backups da aplicacao, logs ou Git. Nao incluir a area em backups externos.
+### 1.2 Modo com Provedores Reais (Opt-in)
 
-Nomes e outros identificadores conhecidos devem ser registrados pelo parser no
-sanitizer antes de gerar descricoes/trechos. CPF/CNPJ numericos tambem sao detectados
-no texto. Isso e mascaramento contextual, nao identificacao universal de pessoas
-nem garantia de anonimizacao integral. Mapa reversivel somente no temporario ativo.
-A finalizacao fecha novas escritas, aguarda leitores e exige exclusao confirmada.
-O marcador privado _closed guarda somente UUID/data de solicitacao da limpeza;
-sua manutencao sera integrada a tombstones/coletor em T113/T115.
+Para testes com a API OpenAI em ambiente controlado:
+- Requer `OpenAI:ApiKey` ou variável de ambiente `OPENAI_API_KEY`.
+- Baseline de chat: `gpt-6-luna` / `gpt-4o`.
+- Baseline de embeddings: `text-embedding-3-small-1536`.
+- Prompts minimizados: zero envio de arquivo bruto DIMP, zero envio de mapas reversíveis. Apenas dados mascarados (`MaskedText`).
 
-## LocalReal e memoria
+---
 
-LocalReal esta definido, mas a inicializacao recusa o modo ate US3. Budgets reais
-permanecem nulos; nao ativar dependencias sem perfil finito avaliado.
-Memory__Enabled=false nesta fase. A porta IExecutionMemoryCleanup retorna confirmacao
-apenas porque nao existe store ativo. Ativar memoria exige substituir o adaptador
-por exclusao MongoDB confirmada em T098/T103; o startup recusa habilitacao prematura.
-Atlas permanece o destino gerenciado. Nenhum cluster Atlas foi criado.
+## 2. Bancos de Dados e Persistência
 
-## Nomes externos
+### 2.1 PostgreSQL com PgVector
+- `AgentDbContext` gerencia o schema proprietário `agente`:
+  - `executions`: ciclo de vida das análises.
+  - `processing_jobs`: fila assíncrona durável com leases e fencing tokens.
+  - `reports`, `findings`, `evidence`, `rule_evaluations`: resultados mascarados e auditáveis.
+  - `provider_call_attempts`: ledger pré-chamada com tokens e custos.
+  - `execution_tombstones`: rastreio mínimo de expiração por 90 dias pós-expiração.
+  - `price_books`: tabelas de preços com alta precisão decimal `(28, 12)`.
+- `KnowledgeDbContext` gerencia o schema proprietário `rag`:
+  - `documents`, `document_revisions`: acervo oficial versionado.
+  - `knowledge_chunks`, `chunk_vectors`: chunks por seção/registro com tipo PostgreSQL `vector(1536)`.
+  - `ingestion_jobs`: rastreamento idempotente de ingestões por SHA-256 do PDF.
+  - `provider_call_attempts`: ledger próprio de embeddings.
 
-| Chave | Uso |
-| --- | --- |
-| ConnectionStrings__AgentDb | Banco agente, usuario agente_app; Api.Agente |
-| ConnectionStrings__KnowledgeDb | Banco rag, usuario rag_app; Api.RAG |
-| ConnectionStrings__MongoDb | Futuro contexto MongoDB local/Atlas TLS |
-| MongoDb__DatabaseName | Database de memoria por ambiente |
-| Rag__McpEndpoint | Futuro endpoint MCP, local :5081/mcp |
-| OpenAI__ApiKey | Credencial externa, nunca em arquivo versionado |
-| Processing__Model | Identidade tecnica do modelo por servico |
-| Processing__GlobalDeadlineSeconds | Deadline global finito |
-| Processing__ProviderTimeoutSeconds | Timeout finito por chamada |
-| Processing__MaximumProviderCalls | Budget total; zero no offline |
-| Processing__TokenBudget | Budget de tokens; zero no offline |
-| Processing__MaximumTransientAttempts | 1..3 |
-| Processing__MaximumSemanticRepairs | 0..1 |
+### 2.2 Migrações Explícitas do EF Core
+As migrações nunca são aplicadas automaticamente em produção:
+```powershell
+dotnet ef database update --project ./src/Api.RAG --context KnowledgeDbContext
+dotnet ef database update --project ./src/Api.Agente --context AgentDbContext
+```
 
-infra/.env atende somente aos containers; nao e carregado pelas APIs.
-Os ambientes personalizados nao dependem do carregamento automatico de User Secrets.
-Fornecer segredos por ambiente/processo ou mecanismo externo. Nao colar valores em logs.
+### 2.3 MongoDB (Memória Conversacional e Contexto)
+- Coleção `conversation_contexts` na `Api.Agente`.
+- Suporte a MongoDB local (`mongodb://127.0.0.1:57017`) e MongoDB Atlas via `ConnectionStrings__MongoDb`.
+- Índice composto único em `{ executionId, conversationId }`.
+- Índice TTL em `expiresAt` com `expireAfterSeconds = 0`.
+- Exclusão explícita confirmada ao final da execução pelo `ExecutionFinalizer` e varredura de órfãos pelo `ArtifactRecoveryWorker`.
 
-## Migrations e telemetria
+---
 
-Ferramenta EF fixada no manifesto .config/dotnet-tools.json.
-AgentDbContext usa schema agente e KnowledgeDbContext schema rag, em bancos/papeis
-distintos. Aplicacao nao executa migrations ao iniciar. O teste local e a ferramenta
-EF fazem isso explicitamente; usar credenciais externas de cada banco.
+## 3. Comunicação Inter-Serviços (Model Context Protocol - MCP)
 
-Telemetria aceita somente categorias AgenteDIMP.Safe.*, com eventos fixos, IDs
-gerados pelo host e status. O source de tracing dedicado nao coleta URL/query,
-headers, corpos, prompts, nomes de arquivo ou excecoes brutas; nenhum exporter
-externo foi configurado. Erros retornam Problem versionado com correlacao do host.
+A `Api.Agente` **nunca** realiza consultas SQL ao banco de dados `rag`. A comunicação é 100% realizada via HTTP stateless no endpoint `/mcp`:
+- `initialize`: protocolo `"2026-07-28"`, servidor `"Api.RAG"`.
+- `tools/list`: catálogo das ferramentas inspecionáveis de leitura.
+- `search_manual`: busca vetorial exata com filtros imutáveis de versão e revisão fixados pelo host.
+- `get_manual_chunk`: recuperação de trecho pontual.
+- `get_document_revision`: metadados da revisão oficial.
+- `get_ingestion_usage`: consumo e tentativas correlacionadas da ingestão.
+
+---
+
+## 4. Políticas de Retenção e Expiração
+
+| Recurso | Período de Retenção | Política de Limpeza |
+|---|---|---|
+| **Arquivo DIMP Bruto e Mapa de Mascaramento** | Durante a execução | Deletados imediatamente após término da validação determinística pelo `ExecutionFinalizer`. |
+| **Memória MongoDB (`conversation_contexts`)** | Durante a execução | Excluída explicitamente e confirmada ao finalizar a execução. |
+| **Relatório Mascarado (`reports`)** | 30 dias após encerramento | Expiração lógica imediata no 30º dia (`410 Gone`). Conteúdo purgado pelo `RetentionWorker`. |
+| **Tombstone Mínimo (`execution_tombstones`)** | 90 dias após expiração (120 dias total) | Mantém apenas `{ executionId, expiredAt, purgeAt }` para responder `410 Gone`. Após `purgeAt`, purgado e responde `404 Not Found`. |
+| **Ledger de Tentativas (`provider_call_attempts`)** | 90 dias após a chamada | Expurgo pelo `UsageRetentionWorker`. Catálogo de preços mantido enquanto referenciado. |
+
+---
+
+## 5. Limites do Marco Atual (EX-001)
+
+- **Autorização e Login:** Adiados conforme EX-001; isolamento técnico local via `ExecutionContext`.
+- **Protocolo A2A e Orquestrador SOFIA:** Integrados e padronizados para etapas posteriores, sem dependência bloqueante na entrega atual.
+- **Frontend e Deploy Externo:** Fora do escopo do marco aprovado; APIs operam de forma autônoma e desacoplada.

@@ -3,6 +3,7 @@ using Api.Agente.Domain;
 using Api.Agente.Domain.Privacy;
 using Api.Agente.Domain.Reports;
 using Api.Agente.Domain.Validation;
+using Api.Agente.Infrastructure.Jobs;
 using Api.Agente.Infrastructure.Usage;
 using Microsoft.EntityFrameworkCore;
 
@@ -11,11 +12,14 @@ namespace Api.Agente.Infrastructure.Persistence;
 public sealed class AgentDbContext(DbContextOptions<AgentDbContext> options, ContentSanitizer? sanitizer = null) : DbContext(options)
 {
     public DbSet<Execution> Executions => Set<Execution>();
+    public DbSet<ProcessingJob> ProcessingJobs => Set<ProcessingJob>();
     public DbSet<Report> Reports => Set<Report>();
     public DbSet<EvidenceSnapshot> Evidence => Set<EvidenceSnapshot>();
     public DbSet<Finding> Findings => Set<Finding>();
     public DbSet<RuleEvaluation> RuleEvaluations => Set<RuleEvaluation>();
     public DbSet<ProviderCallAttempt> ProviderCallAttempts => Set<ProviderCallAttempt>();
+    public DbSet<ExecutionTombstone> ExecutionTombstones => Set<ExecutionTombstone>();
+    public DbSet<PriceBookVersion> PriceBooks => Set<PriceBookVersion>();
 
     protected override void OnModelCreating(ModelBuilder model)
     {
@@ -28,6 +32,15 @@ public sealed class AgentDbContext(DbContextOptions<AgentDbContext> options, Con
             b.Property(x => x.Stage).HasConversion<string>();
             b.Property(x => x.Verdict).HasConversion<string>();
             b.HasIndex(x => x.CorrelationId).IsUnique();
+        });
+        model.Entity<ProcessingJob>(b =>
+        {
+            b.ToTable("processing_jobs"); b.HasKey(x => x.ExecutionId);
+            b.HasOne<Execution>().WithOne().HasForeignKey<ProcessingJob>(x => x.ExecutionId).OnDelete(DeleteBehavior.Cascade);
+            b.Property(x => x.Status).HasConversion(
+                v => v.ToString().ToLowerInvariant(),
+                v => Enum.Parse<JobReservationStatus>(v, true));
+            b.HasIndex(x => new { x.Status, x.AvailableAt, x.LeaseExpiresAt });
         });
         model.Entity<Report>(b =>
         {
@@ -72,6 +85,26 @@ public sealed class AgentDbContext(DbContextOptions<AgentDbContext> options, Con
             b.HasIndex(x => new { x.ExecutionId, x.StartedAt });
             b.HasIndex(x => new { x.LogicalCallId, x.AttemptNumber }).IsUnique();
             // No FK cascade: usage outlives reports.
+        });
+        model.Entity<ExecutionTombstone>(b =>
+        {
+            b.ToTable("execution_tombstones");
+            b.HasKey(x => x.ExecutionId);
+            b.HasIndex(x => x.PurgeAt);
+        });
+        model.Entity<PriceBookVersion>(b =>
+        {
+            b.ToTable("price_books");
+            b.HasKey(x => x.Id);
+            b.OwnsMany(x => x.Rates, rb =>
+            {
+                rb.ToTable("price_book_rates");
+                rb.WithOwner().HasForeignKey("PriceBookId");
+                rb.Property(r => r.InputPricePerMillion).HasPrecision(28, 12);
+                rb.Property(r => r.OutputPricePerMillion).HasPrecision(28, 12);
+                rb.Property(r => r.CachedPricePerMillion).HasPrecision(28, 12);
+                rb.Property(r => r.EmbeddingPricePerMillion).HasPrecision(28, 12);
+            });
         });
     }
 

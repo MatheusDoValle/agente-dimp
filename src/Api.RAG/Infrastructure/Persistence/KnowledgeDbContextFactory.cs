@@ -9,6 +9,6 @@ public sealed class KnowledgeDbContextFactory : IDesignTimeDbContextFactory<Know
     {
         var connection = Environment.GetEnvironmentVariable("ConnectionStrings__KnowledgeDb")
             ?? "Host=127.0.0.1;Port=55432;Database=rag;Username=rag_app";
-        return new KnowledgeDbContext(new DbContextOptionsBuilder<KnowledgeDbContext>().UseNpgsql(connection).Options);
+        return new KnowledgeDbContext(new DbContextOptionsBuilder<KnowledgeDbContext>().UseNpgsql(connection, o => o.UseVector()).Options);
     }
 }

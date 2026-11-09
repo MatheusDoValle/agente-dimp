@@ -32,6 +32,13 @@ public static class ContractJson
         return result;
     }
 
+    public static string Serialize<T>(T value)
+    {
+        ArgumentNullException.ThrowIfNull(value);
+        Validate(value);
+        return JsonSerializer.Serialize(value, Options);
+    }
+
     public static void Validate(object value)
     {
         Validator.ValidateObject(value, new ValidationContext(value), validateAllProperties: true);

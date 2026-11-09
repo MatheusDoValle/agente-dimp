@@ -20,11 +20,18 @@ public static class FoundationRegistration
         {
             var connection = configuration.GetConnectionString("KnowledgeDb");
             if (string.IsNullOrWhiteSpace(connection)) throw new InvalidOperationException("Connection string do banco proprietario nao configurada.");
-            options.UseNpgsql(connection);
+            options.UseNpgsql(connection, npgsqlOptions => npgsqlOptions.UseVector());
             options.EnableSensitiveDataLogging(false);
             options.EnableDetailedErrors(false);
         });
         services.AddScoped<ProviderCallAttemptStore>();
+        services.AddScoped<ProviderAttemptScope>();
+        services.AddHostedService<Api.RAG.Workers.UsageRetentionWorker>();
+        services.AddSingleton<Api.RAG.Infrastructure.Ingestion.PdfDocumentExtractor>();
+        services.AddSingleton<Api.RAG.Application.Ingestion.DocumentChunker>();
+        services.AddScoped<Api.RAG.Infrastructure.AI.IEmbeddingService, Api.RAG.Infrastructure.AI.EmbeddingService>();
+        services.AddScoped<Api.RAG.Application.Ingestion.DocumentIngestionService>();
+        services.AddScoped<Api.RAG.Infrastructure.Retrieval.ExactVectorSearch>();
         services.ConfigureHttpJsonOptions(options =>
         {
             options.SerializerOptions.PropertyNamingPolicy = ContractJson.Options.PropertyNamingPolicy;

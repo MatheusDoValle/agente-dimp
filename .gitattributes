@@ -7,3 +7,6 @@
 *.yaml text eol=lf
 *.ps1 text eol=crlf
 *.pdf binary
+# Synthetic parser fixtures must survive checkout byte-for-byte.
+*.dimp -text
+*.csv text eol=lf

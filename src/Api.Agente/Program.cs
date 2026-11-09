@@ -18,6 +18,10 @@ public partial class Program
         var app = builder.Build();
         app.UseRedactedTelemetry();
         app.MapBootstrapEndpoints();
+        app.MapSubmitAnalysis();
+        app.MapGetAnalysisStatus();
+        app.MapGetAnalysisReport();
+        app.MapGetAnalysisFindings();
         app.Run();
     }
 }

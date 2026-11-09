@@ -1,0 +1,79 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "version": "1.0.0",
+  "description": "Conjunto de avaliacao de recuperacao RAG para o Manual de Orientacao da DIMP v10",
+  "items": [
+    {
+      "id": "Q-0000-OBJ",
+      "query": "Qual e o objetivo e a finalidade do Registro 0000 na DIMP?",
+      "targetRecord": "0000",
+      "expectedPages": [1, 2, 3],
+      "requiredKeywords": ["REGISTRO 0000", "ABERTURA", "DIMP"],
+      "hasEvidence": true,
+      "notes": "Define abertura do arquivo e dados cadastrais do declarante"
+    },
+    {
+      "id": "Q-0000-CAMPO-FINALIDADE",
+      "query": "Como e preenchido o campo de finalidade do arquivo no registro 0000 e quais sao os valores possiveis?",
+      "targetRecord": "0000",
+      "expectedPages": [2, 3],
+      "requiredKeywords": ["FINALIDADE", "REMESSA", "SUBSTITUTO"],
+      "hasEvidence": true,
+      "notes": "Valores 1 (regular), 2 (retificacao total), 3 (retificacao aditiva), 4 (zerada)"
+    },
+    {
+      "id": "Q-0100-DADOS",
+      "query": "Quais dados do declarante devem constar no Registro 0100?",
+      "targetRecord": "0100",
+      "expectedPages": [4, 5],
+      "requiredKeywords": ["REGISTRO 0100", "NOME", "CNPJ", "ENDERECO"],
+      "hasEvidence": true,
+      "notes": "Identificacao do declarante da DIMP"
+    },
+    {
+      "id": "Q-1100-OPERACOES",
+      "query": "O que informa o Registro 1100 a respeito dos estabelecimentos credenciados e operacoes de pagamento?",
+      "targetRecord": "1100",
+      "expectedPages": [10, 11, 12],
+      "requiredKeywords": ["REGISTRO 1100", "CREDENCIADO", "OPERACAO"],
+      "hasEvidence": true,
+      "notes": "Informacoes de operacoes de pagamento por estabelecimento credenciado"
+    },
+    {
+      "id": "Q-9999-TOTALIZADOR",
+      "query": "Qual e a regra de encerramento do arquivo no Registro 9999?",
+      "targetRecord": "9999",
+      "expectedPages": [25, 26],
+      "requiredKeywords": ["REGISTRO 9999", "QTD_LIN", "ENCERRAMENTO"],
+      "hasEvidence": true,
+      "notes": "Total de linhas do arquivo incluindo 0000 e 9999"
+    },
+    {
+      "id": "Q-NO-EVIDENCE-ICMS-ST",
+      "query": "Qual e a aliquota interestadual de ICMS-ST para venda de combustiveis pelo regime monofasico no manual da DIMP?",
+      "targetRecord": null,
+      "expectedPages": [],
+      "requiredKeywords": [],
+      "hasEvidence": false,
+      "notes": "Regra tributaria externa que nao faz parte do manual de leiaute DIMP"
+    },
+    {
+      "id": "Q-NO-EVIDENCE-INVENTADO",
+      "query": "Como preencher o registro 9998 de previsao meteorologica no arquivo DIMP?",
+      "targetRecord": null,
+      "expectedPages": [],
+      "requiredKeywords": [],
+      "hasEvidence": false,
+      "notes": "Registro inexistente, o RAG deve retornar ausente sem inventar"
+    },
+    {
+      "id": "Q-WRONG-REV-V09",
+      "query": "Qual era a regra especifica do leiaute 09 da DIMP revogado?",
+      "targetRecord": null,
+      "expectedPages": [],
+      "requiredKeywords": [],
+      "hasEvidence": false,
+      "notes": "Consulta de versao diferente nao deve retornar dados da versao 10 vigente"
+    }
+  ]
+}

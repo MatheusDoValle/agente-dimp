@@ -82,3 +82,16 @@ não reescrever o hash de S01 como se o arquivo original nunca tivesse sido usad
 
 SF-001/002/003 permanecem impedimentos explícitos de aceite. O planejamento permite
 tarefas de investigação/infraestrutura, mas não declara as regras afetadas resolvidas.
+
+## Incremento de inventario em 2026-11-05
+
+O inventario agora existe em [docs/rules/dimp-v10](../../docs/rules/dimp-v10/README.md),
+com schema, manifesto, unidades de fonte, catalogo e matriz das 58 paginas. Preserva199campos
+dos 29 registros. Enunciados compostos nao equivalem a predicados atomicos independentes.
+Nenhuma regra fiscal foi implementada apenas pela captura do inventario.
+
+SF-004 a SF-010 registram outras divergencias/ambiguidades: TERM_PROP/tecnologia 7,
+hierarquia/numeracao0209, credito parcelado/natureza, NAT_OPER=3 em 1200, referencias
+dos indicadores1500, parceiro em 0002 e obrigatoriedade IND_NAT_JUR em 1115. Regras
+afetadas e aceite de T064/T071 tambem permanecem impedidos. Ver cada registro de
+conflito e [evidencias do incremento](../../docs/validation/us1-t021-t030.md).

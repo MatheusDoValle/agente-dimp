@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param([switch]$All, [switch]$NoBuild)
+param([switch]$All, [switch]$NoBuild, [string]$TestFilter)
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
 $envPath = Join-Path $PSScriptRoot '.env'
@@ -20,6 +20,7 @@ try {
     [Environment]::SetEnvironmentVariable('DIMP_TEST_RAG_CONNECTION', 'Host=127.0.0.1;Port=55432;Database=rag;Username=rag_app;Password=' + $values['RAG_DB_PASSWORD'], 'Process')
     $filter = 'Category=Database'
     if ($All) { $filter = 'Category!=LiveProvider' }
+    if ($TestFilter) { $filter = '(' + $TestFilter + ')&Category!=LiveProvider' }
     $arguments = @('test', (Join-Path $root 'AgenteDIMP.slnx'), '--filter', $filter, '--verbosity', 'minimal',
         '--logger', 'trx;LogFilePrefix=phase2', '--results-directory', (Join-Path $root 'artifacts/test-results'))
     if ($NoBuild) { $arguments += '--no-build' }

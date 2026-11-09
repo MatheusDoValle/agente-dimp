@@ -1,0 +1,301 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/MatheusDoValle/agente-dimp/schemas/dimp-v10/catalog-0.1.0.json",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "catalogVersion": {
+      "const": "0.1.0"
+    },
+    "layoutVersion": {
+      "const": "10"
+    },
+    "revisionSha256": {
+      "const": "FE5610AF2429C718B59FFFD18BECBA40C9C0697CBF02DA6A3236465FA994ED0A"
+    },
+    "sourceDocumentId": {
+      "const": "S01"
+    },
+    "rules": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/rule"
+      },
+      "minItems": 1
+    }
+  },
+  "required": [
+    "catalogVersion",
+    "layoutVersion",
+    "revisionSha256",
+    "sourceDocumentId",
+    "rules"
+  ],
+  "$defs": {
+    "rule": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^DIMP10\\.[A-Za-z0-9._:-]+$"
+        },
+        "catalogVersion": {
+          "type": "string",
+          "minLength": 1
+        },
+        "revisionSha256": {
+          "type": "string",
+          "pattern": "^[A-F0-9]{64}$"
+        },
+        "record": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9]{4}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "field": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        },
+        "source": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "documentId": {
+              "const": "S01"
+            },
+            "page": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 58
+            },
+            "section": {
+              "type": "string",
+              "minLength": 1
+            },
+            "locator": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "documentId",
+            "page",
+            "section",
+            "locator"
+          ]
+        },
+        "statement": {
+          "type": "string",
+          "minLength": 1
+        },
+        "excerpt": {
+          "type": "string",
+          "minLength": 1
+        },
+        "category": {
+          "enum": [
+            "physical",
+            "structure",
+            "field",
+            "conditional",
+            "relationship",
+            "aggregation"
+          ]
+        },
+        "applicability": {
+          "type": "string",
+          "minLength": 1
+        },
+        "preconditions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1
+        },
+        "dataRequirements": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1
+        },
+        "dependencies": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 0
+        },
+        "interpretation": {
+          "enum": [
+            "resolved",
+            "ambiguous",
+            "conflicting"
+          ]
+        },
+        "conflictIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^SF-[0-9]{3}$"
+          },
+          "minItems": 0
+        },
+        "implementation": {
+          "enum": [
+            "planned",
+            "implemented",
+            "blocked"
+          ]
+        },
+        "validatorId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "severity": {
+          "enum": [
+            "bloqueante",
+            "erro",
+            "aviso",
+            "informativo"
+          ]
+        },
+        "severityReason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "tests": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "caseId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "kind": {
+                "enum": [
+                  "positive",
+                  "negative",
+                  "conditional",
+                  "boundary"
+                ]
+              },
+              "status": {
+                "enum": [
+                  "planned",
+                  "implemented",
+                  "awaiting_official_resolution"
+                ]
+              },
+              "fixture": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "expectedResult": {
+                "enum": [
+                  "passed",
+                  "failed",
+                  "not_applicable",
+                  "not_executed",
+                  "blocked_by_source_conflict",
+                  null
+                ]
+              }
+            },
+            "required": [
+              "caseId",
+              "kind",
+              "status",
+              "fixture",
+              "expectedResult"
+            ]
+          },
+          "minItems": 1
+        },
+        "resolution": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "url": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "revisionSha256": {
+                  "type": "string",
+                  "pattern": "^[A-F0-9]{64}$"
+                },
+                "locator": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "consultedAt": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "url",
+                "revisionSha256",
+                "locator",
+                "consultedAt"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "details": {
+          "type": [
+            "object",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "catalogVersion",
+        "revisionSha256",
+        "record",
+        "field",
+        "source",
+        "statement",
+        "excerpt",
+        "category",
+        "applicability",
+        "preconditions",
+        "dataRequirements",
+        "dependencies",
+        "interpretation",
+        "conflictIds",
+        "implementation",
+        "validatorId",
+        "severity",
+        "severityReason",
+        "tests",
+        "resolution",
+        "details"
+      ]
+    }
+  }
+}

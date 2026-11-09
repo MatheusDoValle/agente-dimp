@@ -31,6 +31,7 @@ public sealed class Execution
     public DateTimeOffset? EndedAt { get; private set; }
     public DateTimeOffset UpdatedAt { get; private set; }
     public DateTimeOffset? ReportExpiresAt { get; private set; }
+    public bool HasReport => ReportExpiresAt.HasValue;
     public ExecutionState Status { get; private set; } = ExecutionState.Received;
     public ExecutionStage Stage { get; private set; } = ExecutionStage.Receiving;
     public ExecutionVerdict Verdict { get; private set; } = ExecutionVerdict.Inconclusive;
@@ -71,6 +72,14 @@ public sealed class Execution
         if (layoutVersion != "10" || !Regex.IsMatch(revisionSha256, "^[a-fA-F0-9]{64}$") || snapshotId == Guid.Empty)
             throw new ArgumentException("Referencia documental invalida.");
         ArgumentException.ThrowIfNullOrWhiteSpace(catalogVersion);
+        revisionSha256 = revisionSha256.ToUpperInvariant();
+        if (LayoutVersion is not null)
+        {
+            if (LayoutVersion != layoutVersion || DocumentRevisionSha256 != revisionSha256
+                || RuleCatalogVersion != catalogVersion || ConfigurationSnapshotId != snapshotId)
+                throw new InvalidOperationException("Fonte da execucao e imutavel.");
+            return;
+        }
         LayoutVersion = layoutVersion;
         DocumentRevisionSha256 = revisionSha256;
         RuleCatalogVersion = catalogVersion;
@@ -83,6 +92,19 @@ public sealed class Execution
         if (bytes < 0 || !Regex.IsMatch(sha256, "^[a-fA-F0-9]{64}$")) throw new ArgumentException("Metadados invalidos.");
         BytesReceived = bytes;
         OriginalSha256 = sha256;
+    }
+
+    public void SetVerdict(ExecutionVerdict verdict, bool requiresHumanReview = false)
+    {
+        RequireActive();
+        Verdict = verdict;
+        if (requiresHumanReview) RequiresHumanReview = true;
+    }
+
+    public void SetLimitations(IEnumerable<string> limitationCodes)
+    {
+        RequireActive();
+        LimitationCodes = limitationCodes.Distinct().ToArray();
     }
 
     internal void BeginCleanup(DateTimeOffset now)

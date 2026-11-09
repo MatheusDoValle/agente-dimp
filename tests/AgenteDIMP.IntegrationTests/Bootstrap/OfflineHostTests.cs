@@ -16,7 +16,7 @@ public class OfflineHostTests
         var response = await client.GetAsync("/health/live");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Contains("bootstrap_only", await response.Content.ReadAsStringAsync());
-        Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync("/api/v1/analises")).StatusCode);
+        Assert.True((await client.GetAsync("/api/v1/analises")).StatusCode is HttpStatusCode.NotFound or HttpStatusCode.MethodNotAllowed);
     }
 
     [Fact]

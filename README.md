@@ -1,50 +1,96 @@
-# Agente DIMP
+# Agente DIMP - Validador de Arquivos DIMP com IA e RAG
 
-Duas APIs ASP.NET Core/.NET 10: Api.Agente para orquestracao e Api.RAG para conhecimento.
-Memoria prevista em MongoDB Atlas; acervo e vetores em PostgreSQL/pgvector.
-Repositorio: https://github.com/MatheusDoValle/agente-dimp
+Duas APIs construídas em ASP.NET Core e .NET 10:
+- **`Api.Agente`**: Orquestração assíncrona, validação determinística fiscal, análise contextual por IA, gerenciamento de relatórios e memória conversacional MongoDB.
+- **`Api.RAG`**: Ingestão oficial do Manual CONFAZ (PDF), segmentação por seção/registro, busca vetorial exata com PostgreSQL PgVector e exposição via Model Context Protocol (MCP) stateless no endpoint `/mcp`.
 
-Fases 1 e 2 concluidas: infraestrutura, contratos, modelos, persistencia,
-mascaramento por execucao, ledger e finalizacao segura. O parser DIMP, os validadores
-fiscais, MCP e a analise real de IA pertencem as proximas fases.
-Nao ha endpoint funcional de analise ou chamada paga ativo.
+Repositório Oficial: https://github.com/MatheusDoValle/agente-dimp
 
-## Compilar e testar sem banco
+---
 
-~~~powershell
+## 1. Visão Geral das Quatro Jornadas Implementadas
+
+1. **User Story 1 - Validação Determinística:**
+   - 29 regras fiscais implementadas e validadas para o leiaute DIMP V10.
+   - Leitura de arquivos por streaming contínuo (`IAsyncEnumerable<DimpRecord>`) com memória delimitada.
+   - Filas de processamento duráveis com persistência de checkpoints e fencing tokens no PostgreSQL (`processing_jobs`).
+
+2. **User Story 2 - Relatórios e Achados Estruturados:**
+   - Composição de relatórios com categorização estrita em 5 tipos (`erro_estrutural`, `inconsistencia_negocio`, `indicio_ia`, `ausencia_evidencias`, `falha_tecnica`).
+   - Autoridade inegociável do envelope do sistema sobre o veredito, severidades e exigência de revisão humana.
+   - Paginação estável de achados orientada a cursor base64 (`GET /api/v1/analises/{id}/achados`).
+
+3. **User Story 3 - RAG, MCP e Análise Contextual com IA:**
+   - Extração estruturada de manuais PDF com PdfPig, segmentação por registros/tabelas e cálculo determinístico de hashes.
+   - Servidor MCP stateless em `Api.RAG` (`/mcp`) e cliente tipado `RagMcpClient` na `Api.Agente` (**zero acesso SQL direto** ao banco `rag` pela `Api.Agente`).
+   - Minimização estrita de dados sensíveis (`ContentSanitizer`), memória contextual MongoDB (`conversation_contexts`) e degradação graciosa em caso de indisponibilidade de IA.
+
+4. **User Story 4 - Custos, Ledger e Ciclo de Vida:**
+   - Registro de chamadas pré-chamada em ledger PostgreSQL; nulo nunca vira zero em métricas ausentes.
+   - Catálogo de preços versionado (`PriceBookVersion`) e cálculo de precisão decimal `(28, 12)` sem retries ocultos (`ProviderAttemptScope`).
+   - Retenção do relatório mascarado por 30 dias (expiração imediata retornando `410 Gone`).
+   - `ExecutionTombstone` mantido por 90 dias após expiração (durante os quais retorna `410 Gone`; após expurgo do tombstone passa a retornar `404 Not Found`).
+   - Limpeza e recuperação garantida de arquivos temporários e contexto MongoDB (`ArtifactRecoveryWorker`).
+
+---
+
+## 2. Compilação e Execução de Testes
+
+### 2.1 Compilar a Solução
+
+```powershell
 dotnet restore ./AgenteDIMP.slnx --locked-mode
-dotnet tool restore
 dotnet build ./AgenteDIMP.slnx --no-restore
-dotnet test ./AgenteDIMP.slnx --no-build --filter 'Category!=Database&Category!=LiveProvider'
-~~~
+```
 
-## Executar todos os testes locais
+### 2.2 Executar Testes Unitários (Offline, sem Dependências Externas)
 
-~~~powershell
+```powershell
+dotnet test ./tests/Api.Agente.UnitTests/Api.Agente.UnitTests.csproj
+dotnet test ./tests/Api.RAG.UnitTests/Api.RAG.UnitTests.csproj
+```
+
+Total: **216+ testes aprovados, 0 falhas, 0 ignorados**.
+
+### 2.3 Executar Testes de Integração com Banco Local
+
+Quando os contêineres Docker locais estiverem iniciados:
+
+```powershell
 if (-not (Test-Path ./infra/.env)) { ./infra/New-LocalEnvironment.ps1 }
 docker compose --env-file ./infra/.env -f ./infra/compose.yaml up -d --wait
 ./infra/Test-Foundation.ps1 -All -NoBuild
-~~~
+```
 
-A suite usa os bancos/papeis locais dedicados agente/rag, aplica migrations
-explicitamente e nao apaga bancos/volumes. O script configura credenciais somente
-no processo de teste, sem exibi-las. Testes Database exigem os containers;
-LiveProvider continua separado e nenhuma chamada OpenAI real foi executada.
+---
 
-## Iniciar offline
+## 3. Execução das APIs em Modo LocalDeterministic
 
-Em dois terminais PowerShell na raiz:
+Em dois terminais PowerShell separados:
 
-~~~powershell
-dotnet run --project ./src/Api.RAG --launch-profile LocalDeterministic
-dotnet run --project ./src/Api.Agente --launch-profile LocalDeterministic
-~~~
+```powershell
+# Terminal 1 - Servidor RAG / MCP (Porta 5081)
+dotnet run --project ./src/Api.RAG --launch-profile LocalDeterministic -- --urls http://127.0.0.1:5081
 
-Consultar /health/live em 127.0.0.1:5081 e 127.0.0.1:5080.
-O bootstrap HTTP continua iniciando sem banco/chave; os repositorios so conectam
-quando usados. LocalReal permanece reservado ate a implementacao dos conectores.
+# Terminal 2 - Agente / Orquestrador (Porta 5080)
+dotnet run --project ./src/Api.Agente --launch-profile LocalDeterministic -- --urls http://127.0.0.1:5080
+```
 
-Ver [configuracao](docs/configuration.md), [infraestrutura](infra/README.md),
-[dependencias](docs/validation/dependencies.md),
-[evidencia da Fase 2](docs/validation/phase2-foundation.md) e
-[tarefas](specs/001-validar-arquivo-dimp/tasks.md).
+Verificar integridade dos serviços:
+- `http://127.0.0.1:5081/health/live`
+- `http://127.0.0.1:5080/health/live`
+
+---
+
+## 4. Documentação de Validação e Rastreabilidade
+
+- [Roteiro de Validação e Quickstart](specs/001-validar-arquivo-dimp/quickstart.md)
+- [Resultados do Quickstart](docs/validation/quickstart-results.md)
+- [Matriz de Rastreabilidade (FR-001 a FR-032 e SC-001 a SC-013)](docs/validation/traceability.md)
+- [Evidência US1 - Validação Determinística](docs/validation/us1-deterministic.md)
+- [Evidência US2 - Relatórios e Achados](docs/validation/us2-reporting.md)
+- [Evidência US3 - Apoio do Manual e da IA](docs/validation/us3-ai-rag.md)
+- [Evidência US4 - Custos, Ledger e Retenção](docs/validation/us4-audit-retention.md)
+- [Linha de Base de Desempenho](docs/validation/performance-baseline.md)
+- [Configuração de Ambientes e Operação](docs/configuration.md)
+- [Prontidão para Liberação (Release Readiness)](docs/validation/release-readiness.md)
