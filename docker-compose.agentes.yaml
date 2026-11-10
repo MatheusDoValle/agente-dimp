@@ -1,0 +1,27 @@
+services:
+  agente-dimp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: agente-dimp
+    environment:
+      ASPNETCORE_ENVIRONMENT: "Production"
+      ASPNETCORE_URLS: "http://0.0.0.0:8080"
+      Cors__AllowedOrigins__0: "http://localhost:4200"
+      Cors__AllowedOrigins__1: "http://localhost:5173"
+      A2A__PublicUrl: "http://agente-dimp:8080/a2a"
+    ports:
+      - "8085:8080"
+    networks:
+      - agentes-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+networks:
+  agentes-network:
+    external: true

@@ -29,5 +29,6 @@ tmp
 **/*.mask-map.json
 mask-maps
 **/*.log*
-Dockerfile*
+.vercel
+node_modules
 .dockerignore

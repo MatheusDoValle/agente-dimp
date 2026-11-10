@@ -4,13 +4,17 @@ public static class BootstrapEndpoints
 {
     public static IEndpointRouteBuilder MapBootstrapEndpoints(this IEndpointRouteBuilder endpoints)
     {
-        endpoints.MapGet("/health/live", () => Results.Ok(new
+        var healthHandler = () => Results.Ok(new
         {
             service = "Api.RAG",
             status = "alive",
             profile = "LocalDeterministic",
             capability = "bootstrap_only"
-        }));
+        });
+
+        endpoints.MapGet("/health/live", healthHandler).AllowAnonymous();
+        endpoints.MapGet("/health", healthHandler).AllowAnonymous();
+
         return endpoints;
     }
 }

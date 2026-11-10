@@ -38,6 +38,13 @@ Repositório Oficial: https://github.com/MatheusDoValle/agente-dimp
    - Contrato de domínio **SOFIA v1.0** com validação de conformidade DIMP via `SofiaAnalysisHandler`.
    - Política de **CORS** (`SofiaBrowser`) com suporte a preflight `OPTIONS` para origens web autorizadas.
 
+6. **Conteinerização, Deploy em Nuvem e Vercel (Feature 003):**
+   - Imagens Docker multi-stage com .NET 10 (`Dockerfile` e `Dockerfile.vercel`).
+   - Alocação dinâmica de porta via variável `PORT` com bind em `0.0.0.0` para Vercel e plataformas serverless.
+   - Suporte à rede Docker `agentes-network` da SOFIA (`docker-compose.agentes.yaml`).
+   - Endpoints de integridade e liveness: `GET /health` e `GET /health/live`.
+   - Conexão TLS com PostgreSQL gerenciado com PgVector (Neon, Supabase) e MongoDB Atlas.
+
 ---
 
 ## 2. Compilação e Execução de Testes
@@ -100,5 +107,6 @@ Verificar integridade dos serviços:
 - [Evidência US4 - Custos, Ledger e Retenção](docs/validation/us4-audit-retention.md)
 - [Linha de Base de Desempenho](docs/validation/performance-baseline.md)
 - [Configuração de Ambientes e Operação](docs/configuration.md)
+- [Guia de Implantação e Deploy em Nuvem (Vercel e Docker)](docs/deployment.md)
 - [Evidência de Integração SOFIA A2A e CORS](docs/validation/sofia-a2a-integration.md)
 - [Prontidão para Liberação (Release Readiness)](docs/validation/release-readiness.md)

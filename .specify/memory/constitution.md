@@ -453,6 +453,6 @@ Cada uma DEVE ser resolvida no artefato e na etapa indicados antes do trabalho d
 | D10 | Organização dos dados de consumo em PostgreSQL, precificação, ausência de métricas e falhas de registro. | Plano técnico e ADR quando relevante; contratos de dados e verificações. |
 | D11 | Contratos MCP e A2A, descoberta, autenticação, autorização e marco de entrega A2A. | Resolvida: MCP na Feature 001; A2A v0.3.x, Agent Card e CORS na Feature 002. |
 | D12 | Identidade dos usuários, organizações aplicáveis, dados sensíveis e política de envio ao provedor. | Especificação e esclarecimentos; controles, retenção e exclusão no plano. |
-| D13 | Hospedagem, componentes adicionais, SDKs, topologia e mecanismo de fornecimento de segredos. | Plano técnico e ADRs relevantes, sem alterar as restrições constitucionais. |
+| D13 | Hospedagem, componentes adicionais, SDKs, topologia e mecanismo de fornecimento de segredos. | Resolvida: Vercel Containers, Dockerfile multi-stage, rede SOFIA e bancos externos gerenciados na Feature 003. |
 | D14 | Conjuntos de avaliação, metas de qualidade, desempenho e custo e critérios de aceite operacional. | Requisitos na especificação; procedimento e evidências no plano e na validação. |
 | D15 | Responsáveis nominais por aprovações, exceções e revisão de decisões arquiteturais. | Governança do projeto antes da primeira aprovação ou exceção aplicável. |

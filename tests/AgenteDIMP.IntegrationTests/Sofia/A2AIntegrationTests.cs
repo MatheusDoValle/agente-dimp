@@ -27,6 +27,35 @@ public sealed class A2AIntegrationTests
                 })));
 
     [Fact]
+    public async Task GetHealth_DeveRetornarStatusAlive()
+    {
+        using var area = new TestArtifactArea();
+        await using var host = CreateHost(area.Root);
+        using var client = host.CreateClient();
+
+        using var response = await client.GetAsync("/health");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var json = await response.Content.ReadAsStringAsync();
+        Assert.Contains("\"status\":\"alive\"", json);
+        Assert.Contains("\"service\":\"Api.Agente\"", json);
+    }
+
+    [Fact]
+    public async Task GetHealthLive_DeveRetornarStatusAlive()
+    {
+        using var area = new TestArtifactArea();
+        await using var host = CreateHost(area.Root);
+        using var client = host.CreateClient();
+
+        using var response = await client.GetAsync("/health/live");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var json = await response.Content.ReadAsStringAsync();
+        Assert.Contains("\"status\":\"alive\"", json);
+    }
+
+    [Fact]
     public async Task GetAgentCard_DeveRetornarCardValidoComSkillAnalisarDocumentos()
     {
         using var area = new TestArtifactArea();
