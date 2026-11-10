@@ -25,7 +25,7 @@ public class LiveProviderCompatibilityTests
         var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
         {
             ["OpenAI:ApiKey"] = apiKey,
-            ["OpenAI:ChatModel"] = "gpt-6-luna",
+            ["OpenAI:ChatModel"] = "gpt-4o-mini",
             ["DIMP_TEST_MODE"] = "live"
         }).Build();
 

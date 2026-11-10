@@ -18,7 +18,7 @@ public sealed class OpenAiAnalysisClient(
     ProviderCallAttemptStore attemptStore,
     IConfiguration configuration) : IOpenAiAnalysisClient
 {
-    public const string DefaultBaselineModel = "gpt-6-luna";
+    public const string DefaultBaselineModel = "gpt-4o-mini";
 
     public async Task<AnalyticContent?> GenerateAnalysisAsync(
         BuiltAnalysisPrompt prompt,
