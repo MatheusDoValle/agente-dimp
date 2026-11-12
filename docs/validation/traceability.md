@@ -62,3 +62,15 @@
 | **SC-011** | Zero arquivos originais ou dados de reversão retidos após término | APROVADO | `OutputAndToolBoundaryTests`, `RetentionBoundaryTests` |
 | **SC-012** | Relatório acessível antes de 30 dias e 410 Gone imediatamente ao expirar | APROVADO | `RetentionBoundaryTests`, `us4-audit-retention.md` |
 | **SC-013** | Submissão aceita fornece identificador antes do término; polling funcional | APROVADO | `quickstart-results.md`, `AnalysisSubmissionContractTests` |
+
+## Feature 004 — Perguntas DIMP com RAG
+
+| Requisito | Tarefas | Verificação |
+| --- | --- | --- |
+| FR-001 — Proveniência e perfis | T001, T002 | [Manifesto S01](../rules/dimp-v10/manifest.json) e conferência do PDF no [roteiro](../../specs/004-rag-perguntas-dimp/quickstart.md). |
+| FR-002 — Ingestão retomável e publicação atômica | T003–T006, T091 da Feature 001 | `IngestionContractTests`, `IngestionRecoveryTests` e transferência transacional de 492 vetores no Neon. |
+| FR-003 — Isolamento e ledger | T007–T010 | `McpContractTests`, teste de perfil incompatível e conta de execução limitada no banco gerenciado. |
+| FR-004 — Evidência e limitação | T009, T010, T013 | [Avaliação de recuperação](rag-evaluation.md), citações resolvidas por `get_manual_chunk` e aceite de 12 casos no MCP hospedado. |
+| FR-005 — Pergunta sem arquivo e regressões | T011–T013 | `ManualQuestionIntegrationTests`, `A2AIntegrationTests` e consulta citada no Swagger. |
+| FR-006 — Credenciais e operação hospedada | T014–T016 | MCP sem credencial `401`, ferramenta administrativa com credencial de consulta `403` e ingestão operada em instância separada. |
+| FR-007 — Homologação e produção | T015–T017 | [Evidência da promoção e smoke tests](../../specs/004-rag-perguntas-dimp/quickstart.md#resultado-em-produção--2026-11-12), com identificação do deploy anterior para reversão. |
