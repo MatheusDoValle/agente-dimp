@@ -13,6 +13,7 @@ using Api.Agente.Infrastructure.Usage;
 using Api.Agente.Workers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using System.Net.Http.Headers;
 using System.Text.Json.Serialization;
 
 namespace Api.Agente.Infrastructure.Configuration;
@@ -108,7 +109,13 @@ public static class FoundationRegistration
                 throw new InvalidOperationException("Configure Services__RagApi__TimeoutSeconds entre 1 e 60.");
             client.BaseAddress = address;
             client.Timeout = TimeSpan.FromSeconds(timeout);
-        });
+            if (rag["QueryToken"] is { } token)
+            {
+                if (address.Scheme != Uri.UriSchemeHttps && !address.IsLoopback)
+                    throw new InvalidOperationException("Use HTTPS para enviar a credencial da Api.RAG.");
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            }
+        }).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
 
         var allowedOrigins = configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
             ?? new[] { "http://localhost:4200", "http://localhost:5173" };

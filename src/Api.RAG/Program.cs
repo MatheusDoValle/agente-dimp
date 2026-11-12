@@ -20,15 +20,18 @@ public partial class Program
             builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
         }
         RedactedTelemetry.ConfigureLogging(builder.Logging);
-        BootstrapProfile.Validate(builder.Configuration);
-        builder.Services.AddRagFoundation(builder.Configuration, builder.Environment.ContentRootPath);
+        var queryOnly = builder.Environment.IsProduction();
+        BootstrapProfile.Validate(builder.Configuration, queryOnly);
+        var access = new RagAccessPolicy(builder.Configuration, queryOnly);
+        builder.Services.AddRagFoundation(builder.Configuration, builder.Environment.ContentRootPath, queryOnly);
         builder.Services.AddSingleton<OfflineEmbeddingProvider>();
 
         var app = builder.Build();
         app.UseRedactedTelemetry();
         app.MapBootstrapEndpoints();
-        app.MapDocumentIngestionEndpoints();
-        app.MapMcpEndpoint();
+        if (!queryOnly)
+            app.MapDocumentIngestionEndpoints(access);
+        app.MapMcpEndpoint(access);
         app.Run();
     }
 }

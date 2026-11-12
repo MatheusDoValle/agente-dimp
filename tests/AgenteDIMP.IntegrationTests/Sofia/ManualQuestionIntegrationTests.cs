@@ -143,11 +143,30 @@ public sealed class ManualQuestionIntegrationTests
         Assert.Contains("Posso responder dúvidas gerais", result.Analise);
     }
 
+    [Fact]
+    public async Task HostedDemo_RejectsMultipartBodyAboveFourMiB()
+    {
+        await using var host = CreateHost((_, _) => throw new InvalidOperationException("MCP should not be called."),
+            environment: "Production");
+        using var client = host.CreateClient();
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/demo/dimp");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", Token);
+        var form = new MultipartFormDataContent();
+        form.Add(new ByteArrayContent(new byte[4 * 1024 * 1024]), "arquivo", "sintetico.txt");
+        request.Content = form;
+
+        using var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.RequestEntityTooLarge, response.StatusCode);
+        Assert.Contains("4 MiB", await response.Content.ReadAsStringAsync());
+    }
+
     private static WebApplicationFactory<Api.Agente.Program> CreateHost(
         Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> handle,
-        bool manualSearchEnabled = true) =>
+        bool manualSearchEnabled = true,
+        string environment = "Development") =>
         new DemoHost(manualSearchEnabled).WithWebHostBuilder(builder => builder
-            .UseEnvironment("Development")
+            .UseEnvironment(environment)
             .ConfigureServices(services => services.AddHttpClient<IRagMcpClient, RagMcpClient>()
                 .ConfigurePrimaryHttpMessageHandler(() => new StubMcpHandler(handle))));
 

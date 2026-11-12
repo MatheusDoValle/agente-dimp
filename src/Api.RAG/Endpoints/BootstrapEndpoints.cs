@@ -4,12 +4,12 @@ public static class BootstrapEndpoints
 {
     public static IEndpointRouteBuilder MapBootstrapEndpoints(this IEndpointRouteBuilder endpoints)
     {
-        var healthHandler = () => Results.Ok(new
+        var healthHandler = (IConfiguration config) => Results.Ok(new
         {
             service = "Api.RAG",
             status = "alive",
-            profile = "LocalDeterministic",
-            capability = "bootstrap_only"
+            profile = config["DevelopmentProfile:Name"],
+            capability = config["DevelopmentProfile:Name"] == "HostedQuery" ? "manual_search" : "bootstrap_only"
         });
 
         endpoints.MapGet("/health/live", healthHandler).AllowAnonymous();

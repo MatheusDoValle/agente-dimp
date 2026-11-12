@@ -91,7 +91,7 @@ public partial class Program
         else
         {
             ClassroomDemo.RequireToken(app, demoTokens, LocalDimpDemoEndpoint.Route);
-            app.MapLocalDimpDemo(preview: false);
+            app.MapLocalDimpDemo(preview: app.Environment.IsProduction());
         }
 
         app.Run();

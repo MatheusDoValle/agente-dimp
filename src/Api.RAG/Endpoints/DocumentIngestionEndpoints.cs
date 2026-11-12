@@ -1,6 +1,7 @@
 using Api.RAG.Application.Contracts;
 using Api.RAG.Application.Ingestion;
 using Api.RAG.Infrastructure.Persistence;
+using Api.RAG.Infrastructure.Configuration;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -8,9 +9,12 @@ namespace Api.RAG.Endpoints;
 
 public static class DocumentIngestionEndpoints
 {
-    public static IEndpointRouteBuilder MapDocumentIngestionEndpoints(this IEndpointRouteBuilder endpoints)
+    public static IEndpointRouteBuilder MapDocumentIngestionEndpoints(this IEndpointRouteBuilder endpoints, RagAccessPolicy access)
     {
         var group = endpoints.MapGroup("/api/v1/documentos");
+        group.AddEndpointFilter((context, next) => access.AllowsAdministration(context.HttpContext.Request)
+            ? next(context)
+            : ValueTask.FromResult<object?>(RagAccessPolicy.Challenge(context.HttpContext)));
 
         group.MapPost("/ingestoes", async (
             HttpRequest request,

@@ -10,7 +10,7 @@ namespace Api.RAG.Infrastructure.Configuration;
 
 public static class FoundationRegistration
 {
-    public static IServiceCollection AddRagFoundation(this IServiceCollection services, IConfiguration configuration, string contentRoot)
+    public static IServiceCollection AddRagFoundation(this IServiceCollection services, IConfiguration configuration, string contentRoot, bool queryOnly = false)
     {
         services.AddSingleton(TimeProvider.System);
         services.AddSingleton<IValidateOptions<RagOptions>>(new RagOptionsValidator(configuration));
@@ -26,13 +26,16 @@ public static class FoundationRegistration
         });
         services.AddScoped<ProviderCallAttemptStore>();
         services.AddScoped<ProviderAttemptScope>();
-        services.AddHostedService<Api.RAG.Workers.UsageRetentionWorker>();
-        services.AddSingleton<Api.RAG.Infrastructure.Ingestion.PdfDocumentExtractor>();
-        services.AddSingleton<Api.RAG.Application.Ingestion.DocumentChunker>();
         services.AddScoped<Api.RAG.Infrastructure.AI.IEmbeddingService, Api.RAG.Infrastructure.AI.EmbeddingService>();
-        services.AddScoped<Api.RAG.Application.Ingestion.DocumentIngestionService>();
-        services.AddScoped<Api.RAG.Application.Ingestion.IngestionQueue>();
-        services.AddHostedService<Api.RAG.Workers.DocumentIngestionWorker>();
+        if (!queryOnly)
+        {
+            services.AddHostedService<Api.RAG.Workers.UsageRetentionWorker>();
+            services.AddSingleton<Api.RAG.Infrastructure.Ingestion.PdfDocumentExtractor>();
+            services.AddSingleton<Api.RAG.Application.Ingestion.DocumentChunker>();
+            services.AddScoped<Api.RAG.Application.Ingestion.DocumentIngestionService>();
+            services.AddScoped<Api.RAG.Application.Ingestion.IngestionQueue>();
+            services.AddHostedService<Api.RAG.Workers.DocumentIngestionWorker>();
+        }
         services.AddScoped<Api.RAG.Infrastructure.Retrieval.ExactVectorSearch>();
         services.ConfigureHttpJsonOptions(options =>
         {

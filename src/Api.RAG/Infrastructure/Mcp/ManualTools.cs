@@ -2,6 +2,9 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using Api.RAG.Application.Contracts;
+using Api.RAG.Infrastructure.AI;
+using Api.RAG.Infrastructure.Configuration;
+using Microsoft.AspNetCore.Http.Features;
 using Api.RAG.Infrastructure.Persistence;
 using Api.RAG.Infrastructure.Retrieval;
 using Api.RAG.Infrastructure.Usage;
@@ -18,7 +21,7 @@ public static class ManualTools
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
     };
 
-    public static IEndpointRouteBuilder MapMcpEndpoint(this IEndpointRouteBuilder endpoints)
+    public static IEndpointRouteBuilder MapMcpEndpoint(this IEndpointRouteBuilder endpoints, RagAccessPolicy access)
     {
         endpoints.MapPost("/mcp", async (
             HttpRequest request,
@@ -26,6 +29,20 @@ public static class ManualTools
             [FromServices] ExactVectorSearch vectorSearch,
             CancellationToken ct) =>
         {
+            var canQuery = access.AllowsQuery(request);
+            var canAdminister = access.AllowsAdministration(request);
+            if (!canQuery && !canAdminister)
+                return RagAccessPolicy.Challenge(request.HttpContext);
+
+            if (access.QueryOnly)
+            {
+                const int maxBodySize = 16 * 1024;
+                if (request.ContentLength > maxBodySize)
+                    return Results.StatusCode(StatusCodes.Status413PayloadTooLarge);
+                if (request.HttpContext.Features.Get<IHttpMaxRequestBodySizeFeature>() is { IsReadOnly: false } bodySize)
+                    bodySize.MaxRequestBodySize = maxBodySize;
+            }
+
             using var reader = new StreamReader(request.Body);
             var body = await reader.ReadToEndAsync(ct);
 
@@ -74,7 +91,9 @@ public static class ManualTools
                         id,
                         result = new
                         {
-                            tools = GetToolDefinitions()
+                            tools = canQuery
+                                ? GetToolDefinitions(canAdminister)
+                                : [IngestionUsageDefinition]
                         }
                     });
 
@@ -82,6 +101,17 @@ public static class ManualTools
                     var paramsNode = reqObj["params"] as JsonObject;
                     var toolName = paramsNode?["name"]?.GetValue<string>();
                     var arguments = paramsNode?["arguments"] as JsonObject ?? [];
+
+                    var administrationTool = toolName == "get_ingestion_usage";
+                    if ((administrationTool && !canAdminister) || (!administrationTool && !canQuery))
+                        return Results.StatusCode(StatusCodes.Status403Forbidden);
+                    if (access.QueryOnly && toolName == "search_manual" &&
+                        (arguments["query"] is not JsonValue queryValue ||
+                         !queryValue.TryGetValue<string>(out var query) || query.Length > 1200 ||
+                         arguments["embeddingProfileId"]?.ToString() != EmbeddingService.DefaultBaselineProfileId))
+                    {
+                        return Results.BadRequest(new { jsonrpc = "2.0", id, error = new { code = -32602, message = "Invalid query or embedding profile." } });
+                    }
 
                     var callResult = await ExecuteToolCallAsync(toolName, arguments, db, vectorSearch, ct);
                     return Results.Ok(new
@@ -114,7 +144,7 @@ public static class ManualTools
         return endpoints;
     }
 
-    private static object[] GetToolDefinitions() =>
+    private static object[] GetToolDefinitions(bool canAdminister) =>
     [
         new
         {
@@ -164,21 +194,23 @@ public static class ManualTools
                 required = new[] { "documentRevisionSha256" }
             }
         },
-        new
-        {
-            name = "get_ingestion_usage",
-            description = "Retorna consumo e tentativas correlacionadas a uma ingestão.",
-            inputSchema = new
-            {
-                type = "object",
-                properties = new
-                {
-                    ingestionId = new { type = "string", format = "uuid" }
-                },
-                required = new[] { "ingestionId" }
-            }
-        }
+        ..(canAdminister ? new[] { IngestionUsageDefinition } : [])
     ];
+
+    private static readonly object IngestionUsageDefinition = new
+    {
+        name = "get_ingestion_usage",
+        description = "Retorna consumo e tentativas correlacionadas a uma ingestão.",
+        inputSchema = new
+        {
+            type = "object",
+            properties = new
+            {
+                ingestionId = new { type = "string", format = "uuid" }
+            },
+            required = new[] { "ingestionId" }
+        }
+    };
 
     private static async Task<object> ExecuteToolCallAsync(
         string? toolName,
