@@ -117,7 +117,7 @@ public sealed class SofiaContractTests
         Assert.Contains($"\"idExecucao\":\"{idExec}\"", json);
         Assert.Contains($"\"idSolicitacao\":\"{idSol}\"", json);
         Assert.Contains("\"idAgente\":\"agente-dimp\"", json);
-        Assert.Contains("\"nome\":\"Agente Fiscal DIMP\"", json);
+        Assert.Contains("\"nome\":\"Agente Fiscal DIMP INFIS\"", json);
         Assert.Contains("\"status\":\"concluido\"", json);
         Assert.Contains("\"idAchado\":\"ach-001\"", json);
         Assert.Contains("\"severidade\":\"alta\"", json);

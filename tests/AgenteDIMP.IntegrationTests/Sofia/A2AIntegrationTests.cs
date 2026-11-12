@@ -187,7 +187,11 @@ public sealed class A2AIntegrationTests
         Assert.Equal("1.0", resultadoSofia.VersaoContrato);
         Assert.Equal(idExec, resultadoSofia.IdExecucao);
         Assert.Equal(idSol, resultadoSofia.IdSolicitacao);
+        using var cardResponse = await client.GetAsync("/.well-known/agent-card.json");
+        cardResponse.EnsureSuccessStatusCode();
+        using var card = JsonDocument.Parse(await cardResponse.Content.ReadAsStringAsync());
         Assert.Equal("agente-dimp", resultadoSofia.Agente.IdAgente);
+        Assert.Equal(card.RootElement.GetProperty("name").GetString(), resultadoSofia.Agente.Nome);
         Assert.Equal("concluido", resultadoSofia.Status);
         Assert.NotEmpty(resultadoSofia.Achados);
         Assert.Contains("doc-01", resultadoSofia.Achados[0].IdDocumentos);

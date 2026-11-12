@@ -126,7 +126,7 @@ public sealed record AgenteSofia(
     [property: Required] string Nome
 )
 {
-    public static readonly AgenteSofia PadraoDimp = new("agente-dimp", "Agente Fiscal DIMP");
+    public static readonly AgenteSofia PadraoDimp = new("agente-dimp", "Agente Fiscal DIMP INFIS");
 }
 
 public sealed record AchadoSofia(

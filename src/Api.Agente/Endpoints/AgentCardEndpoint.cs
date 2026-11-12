@@ -15,7 +15,7 @@ public static class AgentCardEndpoint
             var publicUrl = configuration["A2A:PublicUrl"] ?? "https://agente-dimp-demo.vercel.app/a2a";
 
             var card = new AgentCard(
-                Name: "Agente Fiscal DIMP INFIS",
+                Name: AgenteSofia.PadraoDimp.Nome,
                 Description: "Analisa e valida declaracoes e arquivos fiscais DIMP (Ato COTEPE/ICMS 65/2018) enviados pela SOFIA.",
                 Url: publicUrl,
                 Version: configuration["A2A:Version"] ?? "1.0.0",
