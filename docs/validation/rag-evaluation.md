@@ -1,55 +1,43 @@
-# Avaliação e Seleção de Perfil RAG - Acervo DIMP v10
+# Avaliação de recuperação do Manual DIMP V10
 
-**Data:** 09/11/2026  
-**Ambiente:** .NET 10, PostgreSQL com PgVector, PdfPig  
-**Status do Gate Objetivo:** APROVADO (100% das evidências obrigatórias recuperadas)
+A avaliação da Feature 004 usa a revisão oficial S01, identificada no [manifesto do catálogo](../rules/dimp-v10/manifest.json). A extração é `pdfpig-v1`, a segmentação é `chunk-layout10-section-record-v1` e a busca retorna até cinco trechos do PostgreSQL com pgvector.
 
----
+O conjunto original em `items` de [evaluation.json](../../tests/fixtures/rag/evaluation.json) continua sendo usado como teste de regressão sobre trechos sintéticos e embeddings determinísticos. O resultado anterior de 5/5 verificava esses exemplos. Ele não mede a recuperação semântica no PDF oficial nem valida todas as páginas e casos sem evidência.
 
-## 1. Visão Geral e Parâmetros Avaliados
+## Critérios do ensaio no PDF oficial
 
-De acordo com o **Gate Objetivo de Qualidade RAG** definido em `specs/001-validar-arquivo-dimp/research.md` (R06, R07, R10), nenhum perfil pode ser promovido sem avaliação reproduzível contra o manual oficial do CONFAZ (`dimp-v10-manual-confaz.pdf` com SHA-256 `fe5610af2429c718b59fffd18becba40c9c0697cbf02da6a3236465fa994ed0a`).
+- `semantic.calibration` serve para medir a distância da evidência esperada e das respostas irrelevantes. A distância máxima é candidata quando separa as evidências que dependem da busca vetorial dos casos sem evidência.
+- `semantic.acceptance` usa perguntas separadas, com evidências por página e palavra, casos sem evidência, revisão errada e perfil errado.
+- A aprovação exige todas as evidências obrigatórias entre os resultados, referências com páginas e revisão verificáveis, nenhuma mistura de perfil ou revisão e ausência explícita de evidência nos casos negativos.
+- O [roteiro executável](../../specs/004-rag-perguntas-dimp/Measure-RagRetrieval.ps1) mede esses critérios via MCP. O aceite é feito com a distância configurada na API e `text-embedding-3-small-1536`.
 
-### 1.1 Identidade Técnica dos Perfis Avaliados
+## Resultado da verificação local
 
-| Componente | Perfil Selecionado | Descrição e Parâmetros Medidos |
-|---|---|---|
-| **Extração PDF** | `pdfpig-v1` | Extração por página e palavra via PdfPig, agrupamento vertical/horizontal por proximidade geométrica (`tolerance = Math.Max(2.0, wordHeight * 0.4)`). Preserva cabeçalhos de tabela e números de página reais. |
-| **Segmentação** | `chunk-layout10-section-record-v1` | Segmentação orientada a seção e registro DIMP. Detecta blocos `REGISTRO [0-9]{4}`, propaga cabeçalho de contexto nos chunks quebrados, preserva códigos de registros e campos associados. `targetMaxChars: 1200`, `maxChars: 1800`, `overlapChars: 100`. |
-| **Embeddings** | `text-embedding-3-small-1536` | Modelo OpenAI `text-embedding-3-small`, dimensão 1536, métrica de distância `cosine_distance`, normalizado. Modo offline reproduzível (`local-fake-sha256-v1`) preserva dimensionalidade 1536 e normalização unitária. |
-| **Recuperação** | `exact-vector-cosine-v1` | Busca exata via PostgreSQL PgVector (`VectorExtensions.CosineDistance`), filtrada obrigatoriamente por `documentRevisionSha256`, `layoutVersion = "10"` e `embeddingProfileId`. Opcionalmente restrita por `recordCodes` conhecidos. |
+| Verificação | Resultado |
+| --- | --- |
+| Validação do perfil e do orçamento | 4 testes unitários aprovados. |
+| Ingestão, MCP e isolamento dos índices | 15 testes de integração aprovados. O perfil semântico não retorna vetores do índice determinístico nem aciona o provedor se não há corpus desse perfil. |
+| Calibração com o índice determinístico de S01 | 1 de 3 casos passou. Uma consulta sem evidência recebeu trechos e a amostra não sugeriu um limiar. |
+| Aceite em execução diagnóstica com o índice determinístico | 2 de 7 casos passaram, ambos controles de isolamento. O ensaio usou distância máxima de 2, sem corte efetivo de relevância. |
+| Reindexação semântica de S01 | Concluída, com 492 trechos e vetores de 1.536 dimensões. |
 
----
+Os limites iniciais de desenvolvimento para a carga semântica são 600 chamadas, 1.000.000 de tokens estimados de forma conservadora, 30 segundos por chamada e 900 segundos por execução. O SDK faz uma tentativa por chamada. Esse ensaio determinístico não calibra o limiar do perfil semântico.
 
-## 2. Conjunto de Avaliação (`evaluation.json`)
+## Resultado com embeddings da OpenAI
 
-O conjunto de teste versionado em `tests/fixtures/rag/evaluation.json` compreende:
-1. **Casos Respondíveis por Registro/Campo:**
-   - `Q-0000-OBJ`: Objetivo e finalidade do Registro 0000 (Abertura e Identificação). Páginas 1, 2, 3.
-   - `Q-0000-CAMPO-FINALIDADE`: Campo finalidade do arquivo no Registro 0000 (Valores 1, 2, 3, 4). Páginas 2, 3.
-   - `Q-0100-DADOS`: Dados do declarante no Registro 0100 (Nome, CNPJ, Endereço). Páginas 4, 5.
-   - `Q-1100-OPERACOES`: Estabelecimentos credenciados e operações de pagamento. Páginas 10, 11, 12.
-   - `Q-9999-TOTALIZADOR`: Encerramento do arquivo e quantidade total de linhas (`QTD_LIN`). Páginas 25, 26.
-2. **Casos sem Evidência Normativa (Negative / Out of Scope):**
-   - `Q-NO-EVIDENCE-ICMS-ST`: Alíquota de ICMS-ST monofásico de combustíveis (regra externa inexistente no manual de leiaute DIMP).
-   - `Q-NO-EVIDENCE-INVENTADO`: Consulta de registro inexistente (Registro 9998 de meteorologia).
-3. **Casos de Revisão Incorreta:**
-   - `Q-WRONG-REV-V09`: Consulta referente a leiaute anterior revogado (leiaute 09).
+A ingestão `0d654e51-d1f8-4184-ae3e-6d5e6968762f` publicou 492 trechos da revisão S01 com `text-embedding-3-small-1536` em 398 segundos no ambiente local. O índice de embeddings determinísticos segue identificado pelo perfil próprio.
 
----
+| Ensaio | Resultado |
+| --- | --- |
+| Calibração | 0 de 3 casos aprovados. As perguntas positivas não trouxeram o trecho obrigatório entre os cinco primeiros e a pergunta negativa recebeu trechos. A calibração não sugeriu uma distância máxima. |
+| Aceite diagnóstico, sem corte de relevância | 3 de 7 casos aprovados. Passaram o total de linhas e os controles de revisão e perfil incorretos. |
+| Critério SC-002 no ensaio inicial | Pendente após o ensaio apenas vetorial. |
 
-## 3. Resultados Medidos no Gate de Aceite
+A inspeção no PostgreSQL confirmou que os trechos de `DT_OP` (p. 36), `HORA` (p. 38) e `DT_CANC` (p. 45) foram extraídos. As consultas de data da operação e de cancelamento chegaram à página esperada em alguns casos, mas trouxeram outro trecho da página. A busca híbrida manteve os 492 vetores da revisão e passou a expandir a consulta com nomes do leiaute V10. A busca também reserva espaço para trechos que contêm uma definição de campo ou regra associada aos termos identificados na pergunta. Esses trechos têm `matchType: lexical`. Os demais passam pelo corte de distância, com `matchType: semantic`.
 
-| Métrica Obrigatória do Gate | Critério Exigido | Resultado Obtido | Status |
-|---|---|---|---|
-| **Recall@K em Casos Respondíveis** | 100% | **100.0% (5/5)** | **APROVADO** |
-| **Localizadores e Páginas Conferíveis** | 100% | **100.0%** (todas as páginas coincidem com o PDF oficial) | **APROVADO** |
-| **Mistura de Revisões ou Perfis** | 0% | **0.0%** (filtro estrito por SHA-256 e profileId) | **APROVADO** |
-| **Tratamento de Perguntas sem Evidência** | 100% | **100.0%** (zero respostas normativas fabricadas; retorno explícito de limitação `NO_EVIDENCE_FOUND`) | **APROVADO** |
+## Aceite após o ajuste
 
----
-
-## 4. Conclusão e Promoção
-
-O perfil conjunto `pdfpig-v1` + `chunk-layout10-section-record-v1` + `text-embedding-3-small-1536` atendeu a **100% dos critérios do gate objetivo**.
-Fica promovido como o perfil oficial de acervo para a User Story 3 e integração com a `Api.Agente`.
+- Calibração com 7 casos. As seis perguntas positivas encontraram evidência. A maior distância necessária para uma correspondência vetorial foi `0.3105399605674988`. O primeiro resultado da consulta fora do escopo, medido com o corte desativado, ficou em `0.42183083288980894`.
+- A Api.RAG foi reiniciada com `Processing__MaximumCosineDistance=0.36618539672865386`. A conferência com o corte ativo passou nos 7 casos de calibração. O aceite local passou em 12 de 12 casos, com `SemanticGatePassed: true`.
+- A pergunta original “Qual registro tem a data da venda?” retornou `DT_OP`, p. 36. O teste também recuperou a relação entre os registros 1110 e 1115, o campo `DT_CANC`, o total de linhas, o delimitador, quem presta as informações e a transmissão via TED-TEF. Cada citação esperada foi consultada novamente por `get_manual_chunk`, com verificação da revisão, página e conteúdo.
+- Os testes de ausência de evidência e de isolamento de revisão e perfil passaram. O vocabulário foi refinado durante o diagnóstico. A aprovação se aplica à amostra atual do Manual V10 S01.

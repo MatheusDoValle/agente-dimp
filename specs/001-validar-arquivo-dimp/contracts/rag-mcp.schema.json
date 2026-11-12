@@ -213,6 +213,10 @@
           "type": "string",
           "minLength": 1
         },
+        "matchType": {
+          "type": "string",
+          "enum": ["lexical", "semantic"]
+        },
         "rankingMetric": {
           "type": "object",
           "additionalProperties": false,

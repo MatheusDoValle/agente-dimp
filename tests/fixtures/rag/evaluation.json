@@ -75,5 +75,193 @@
       "hasEvidence": false,
       "notes": "Consulta de versao diferente nao deve retornar dados da versao 10 vigente"
     }
-  ]
+  ],
+  "semantic": {
+    "revision": "fe5610af2429c718b59fffd18becba40c9c0697cbf02da6a3236465fa994ed0a",
+    "layoutVersion": "10",
+    "topK": 5,
+    "calibration": [
+      {
+        "id": "C-OPERACAO",
+        "query": "Onde o manual informa a data da operação diária de pagamento?",
+        "evidence": [
+          {
+            "page": 36,
+            "keyword": "DT_OP"
+          }
+        ]
+      },
+      {
+        "id": "C-HORARIO",
+        "query": "Qual campo guarda a hora do comprovante de uma transação?",
+        "evidence": [
+          {
+            "page": 38,
+            "keyword": "HORA"
+          }
+        ]
+      },
+      {
+        "id": "C-CODIFICACAO",
+        "query": "Qual codificação de caracteres é aceita no arquivo DIMP?",
+        "evidence": [
+          {
+            "page": 2,
+            "keyword": "ISO 8859-1",
+            "matchType": "lexical"
+          }
+        ]
+      },
+      {
+        "id": "C-REMESSA-NORMAL",
+        "query": "Qual é a finalidade da remessa de arquivo normal na DIMP?",
+        "evidence": [
+          {
+            "page": 10,
+            "keyword": "Remessa de arquivo normal",
+            "matchType": "lexical"
+          }
+        ]
+      },
+      {
+        "id": "C-PERIODICIDADE",
+        "query": "Com que frequência as instituições de pagamento precisam gerar o arquivo DIMP por unidade da Federação?",
+        "evidence": [
+          {
+            "page": 1,
+            "keyword": "geradas mensalmente",
+            "matchType": "semantic"
+          }
+        ]
+      },
+      {
+        "id": "C-ENCERRAMENTO-BLOCO",
+        "query": "Qual é a finalidade do registro de encerramento do bloco 9?",
+        "evidence": [
+          {
+            "page": 9,
+            "keyword": "9990 Encerramento do Bloco 9",
+            "matchType": "semantic"
+          }
+        ]
+      },
+      {
+        "id": "C-SEM-EVIDENCIA",
+        "query": "Como preencher o registro 9998 de previsão meteorológica na DIMP?",
+        "evidence": []
+      }
+    ],
+    "acceptance": [
+      {
+        "id": "A-DATA-VENDA",
+        "query": "Qual registro tem a data da venda informada no resumo diário?",
+        "evidence": [
+          {
+            "page": 36,
+            "keyword": "DT_OP"
+          }
+        ]
+      },
+      {
+        "id": "A-COMPROVANTE",
+        "query": "Como relaciono um comprovante de pagamento ao resumo diário?",
+        "evidence": [
+          {
+            "page": 36,
+            "keyword": "DT_OP"
+          },
+          {
+            "page": 40,
+            "keyword": "soma dos valores"
+          }
+        ]
+      },
+      {
+        "id": "A-CANCELAMENTO",
+        "query": "Em qual campo consta a data em que uma transação foi cancelada?",
+        "evidence": [
+          {
+            "page": 45,
+            "keyword": "DT_CANC"
+          }
+        ]
+      },
+      {
+        "id": "A-TOTAL-LINHAS",
+        "query": "Onde fica o total de linhas do arquivo digital?",
+        "evidence": [
+          {
+            "page": 58,
+            "keyword": "QTD_LIN"
+          }
+        ]
+      },
+      {
+        "id": "A-SEM-EVIDENCIA",
+        "query": "Qual é a previsão do tempo para São Paulo amanhã?",
+        "evidence": []
+      },
+      {
+        "id": "A-VENDA-PERGUNTA-ORIGINAL",
+        "query": "Qual registro tem a data da venda?",
+        "evidence": [
+          {
+            "page": 36,
+            "keyword": "DT_OP"
+          }
+        ]
+      },
+      {
+        "id": "A-SEPARADOR",
+        "query": "Qual caractere separa os campos de cada registro?",
+        "evidence": [
+          {
+            "page": 3,
+            "keyword": "Pipe",
+            "matchType": "lexical"
+          }
+        ]
+      },
+      {
+        "id": "A-PRESTADORES",
+        "query": "Quem precisa informar as operações de pagamento e intermediação no arquivo?",
+        "evidence": [
+          {
+            "page": 1,
+            "keyword": "intermediadores de serviços e de negócios",
+            "matchType": "semantic"
+          }
+        ]
+      },
+      {
+        "id": "A-TRANSMISSAO",
+        "query": "Qual programa transmite o arquivo da DIMP?",
+        "evidence": [
+          {
+            "page": 1,
+            "keyword": "transmissão via TED-TEF",
+            "matchType": "lexical"
+          }
+        ]
+      },
+      {
+        "id": "A-FORA-ESCOPO-FISCAL",
+        "query": "Como emitir nota fiscal de serviço pelo portal nacional?",
+        "evidence": []
+      },
+      {
+        "id": "A-REVISAO-INCORRETA",
+        "query": "Qual registro tem a data da venda?",
+        "revision": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "expectedError": "REVISION_NOT_FOUND",
+        "evidence": []
+      },
+      {
+        "id": "A-PERFIL-INCORRETO",
+        "query": "Onde fica a data da operação?",
+        "profile": "perfil-inexistente-avaliacao",
+        "evidence": []
+      }
+    ]
+  }
 }

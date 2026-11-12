@@ -11,6 +11,7 @@ public sealed class RagOptions
     public int MaximumTransientAttempts { get; set; } = 3;
     public int MaximumSemanticRepairs { get; set; } = 1;
     public string? Model { get; set; }
+    public double? MaximumCosineDistance { get; set; }
 }
 
 public sealed class RagOptionsValidator(IConfiguration configuration) : IValidateOptions<RagOptions>
@@ -19,10 +20,11 @@ public sealed class RagOptionsValidator(IConfiguration configuration) : IValidat
     {
         var enabled = configuration.GetValue<bool>("DevelopmentProfile:ExternalCallsEnabled");
         var errors = new List<string>();
-        if (options.GlobalDeadlineSeconds is not { } deadline || !double.IsFinite(deadline) || deadline <= 0 || deadline > TimeSpan.MaxValue.TotalSeconds)
+        var maxTimerSeconds = (uint.MaxValue - 1) / 1000d;
+        if (options.GlobalDeadlineSeconds is not { } deadline || !double.IsFinite(deadline) || deadline <= 0 || deadline > maxTimerSeconds)
             errors.Add("Deadline global finito e positivo obrigatorio.");
         if (options.ProviderTimeoutSeconds is not { } timeout || !double.IsFinite(timeout) || timeout <= 0
-            || timeout > TimeSpan.MaxValue.TotalSeconds || timeout > options.GlobalDeadlineSeconds)
+            || timeout > maxTimerSeconds || timeout > options.GlobalDeadlineSeconds)
             errors.Add("Timeout finito deve caber no deadline.");
         if (options.MaximumProviderCalls is null or < 0 || enabled && options.MaximumProviderCalls == 0)
             errors.Add("Budget de chamadas invalido.");
@@ -33,6 +35,9 @@ public sealed class RagOptionsValidator(IConfiguration configuration) : IValidat
         if (string.IsNullOrWhiteSpace(options.Model) || !System.Text.RegularExpressions.Regex.IsMatch(options.Model, "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$")
             || options.Model.StartsWith("sk-", StringComparison.OrdinalIgnoreCase))
             errors.Add("Identidade tecnica de modelo obrigatoria; nunca usar credencial.");
+        if (options.MaximumCosineDistance is double distance &&
+            (!double.IsFinite(distance) || distance is < 0 or > 2))
+            errors.Add("Distância máxima de cosseno deve estar entre 0 e 2.");
         return errors.Count == 0 ? ValidateOptionsResult.Success : ValidateOptionsResult.Fail(errors);
     }
 }

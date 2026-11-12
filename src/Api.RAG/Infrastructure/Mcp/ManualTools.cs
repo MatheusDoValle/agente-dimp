@@ -249,6 +249,7 @@ public static class ManualTools
             recordCodes = h.RecordCodes,
             fieldCodes = h.FieldCodes,
             text = h.Text,
+            matchType = h.IsLexicalMatch ? "lexical" : "semantic",
             rankingMetric = new
             {
                 name = "cosine_distance",

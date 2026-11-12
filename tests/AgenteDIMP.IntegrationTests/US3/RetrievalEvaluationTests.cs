@@ -147,6 +147,13 @@ public class RetrievalEvaluationTests(FoundationDatabaseFixture fixture)
             config);
 
         var searchService = new ExactVectorSearch(db, offlineEmbeddingService);
+        var otherProfile = await searchService.SearchAsync(
+            "Registro 0000", "10", sha, EmbeddingService.DefaultBaselineProfileId);
+        Assert.Empty(otherProfile.Hits);
+        Assert.Null(otherProfile.AttemptId);
+        Assert.Contains("NO_EVIDENCE_FOUND", otherProfile.LimitationCodes);
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            offlineEmbeddingService.GenerateEmbeddingAsync("Registro 0000", EmbeddingService.DefaultBaselineProfileId));
 
         var totalRespondiveis = items.Count(i => i.HasEvidence);
         var totalAcertos = 0;

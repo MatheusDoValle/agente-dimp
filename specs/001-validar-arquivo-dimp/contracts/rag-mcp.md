@@ -40,7 +40,10 @@ correlação para não desaparecer da contabilização da execução.
 
 Cada hit contém chunkId, documentId, documentRevisionSha256, layoutVersion,
 embeddingProfileId, pages, section, recordCodes, fieldCodes quando recuperáveis,
-text e rankingMetric. Campos indisponíveis são nulos/listas vazias com limitação;
+text e rankingMetric. O campo opcional matchType informa se o trecho foi selecionado
+por uma expressão literal do manual (lexical) ou pela busca por vetores (semantic).
+Quando configurado, o limite de distância se aplica aos hits semânticos.
+Campos indisponíveis são nulos/listas vazias com limitação;
 não inventar página ou campo. A métrica só ordena resultados e não certifica conformidade.
 
 A resposta contém também usageReferences com identificadores das chamadas de
