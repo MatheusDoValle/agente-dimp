@@ -2,6 +2,9 @@ namespace Api.Agente.Domain.Validation.Records;
 
 public sealed class Record0005Validator : IRecordValidator
 {
+    internal const int PostalCodeIndex = 3;
+    internal const int FieldCount = 9;
+
     public string RecordCode => "0005";
 
     public IReadOnlyList<RuleEvaluation> Validate(DimpRecord record, Guid executionId)
@@ -12,7 +15,7 @@ public sealed class Record0005Validator : IRecordValidator
         var evaluations = new List<RuleEvaluation>();
         var lineKey = $"line:{record.LineNumber}";
 
-        var isStructureValid = record.Fields.Length == 9 && record.Fields[0] == "0005";
+        var isStructureValid = record.Fields.Length == FieldCount && record.Fields[0] == "0005";
         evaluations.Add(new RuleEvaluation(
             executionId,
             "DIMP10.0005.STRUCTURE",
@@ -32,11 +35,10 @@ public sealed class Record0005Validator : IRecordValidator
             RuleApplicability.Applicable,
             isEndValid ? RuleResult.Passed : RuleResult.Failed));
 
-        if (record.Fields.Length < 4) return evaluations;
+        if (record.Fields.Length <= PostalCodeIndex) return evaluations;
 
-        // CEP check (field 4: 8 digits)
-        var cep = record.Fields[3];
-        var isCepValid = string.IsNullOrWhiteSpace(cep) || (cep.Length == 8 && cep.All(char.IsAsciiDigit));
+        var cep = record.Fields[PostalCodeIndex];
+        var isCepValid = string.IsNullOrWhiteSpace(cep) || IsPostalCodeFormat(cep);
         evaluations.Add(new RuleEvaluation(
             executionId,
             "DIMP10.0005.F04.TABLE",
@@ -46,4 +48,6 @@ public sealed class Record0005Validator : IRecordValidator
 
         return evaluations;
     }
+
+    internal static bool IsPostalCodeFormat(string value) => value.Length == 8 && value.All(char.IsAsciiDigit);
 }

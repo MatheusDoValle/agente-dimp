@@ -128,6 +128,7 @@ public sealed class SofiaAnalysisHandler : ISofiaAnalysisHandler
             {
                 findings.Add(new AchadoSofia(
                     $"ach-{failures:D3}",
+                    SofiaDimpQuestions.DescribeFileFinding(evaluation) ??
                     $"Inconsistencia fiscal na regra {evaluation.RuleId} ({evaluation.OccurrenceKey}).",
                     [document.IdDocumento],
                     [$"Falha detectada na regra {evaluation.RuleId} em {evaluation.OccurrenceKey} no documento {document.Nome}."],

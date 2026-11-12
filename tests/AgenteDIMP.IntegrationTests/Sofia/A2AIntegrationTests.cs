@@ -197,6 +197,57 @@ public sealed class A2AIntegrationTests
         Assert.Contains("doc-01", resultadoSofia.Achados[0].IdDocumentos);
     }
 
+    [Theory]
+    [InlineData("", "01001000", true)]
+    [InlineData("01002000", "01001000", false)]
+    [InlineData("", "1001000", false)]
+    public async Task PostA2A_LinhaIsolada_ExplicaEstruturaESugereCepSomenteComContexto(
+        string cepDoRegistro, string valorIsolado, bool sugereCep)
+    {
+        using var area = new TestArtifactArea();
+        await using var host = CreateHost(area.Root);
+        using var client = host.CreateClient();
+
+        var arquivo = $"""
+            |0000|10|4|SP|00000000000191|INSTITUICAO SINTETICA|20260601|20260630|2|202607|
+            |0001|1|
+            |0005|SINTETICA|RUA SINTETICA 1|{cepDoRegistro}|3550308|SP|CONTATO SINTETICO|1100000000|exemplo@example.invalid|
+            {valorIsolado}
+            |9999|5|
+            """;
+        var solicitacao = new SolicitacaoAnaliseSofia(
+            "1.0", Guid.NewGuid(), Guid.NewGuid(), new UsuarioSofia("Auditor de teste"),
+            "Liste os erros por registro e linha neste arquivo DIMP.",
+            [new DocumentoSofia("doc-cep", "DIMP-cep.txt", "text/plain", arquivo)]);
+        var payload = JsonSerializer.Serialize(solicitacao, ContractJson.Options);
+        var request = new A2ARpcRequest("2.0", "rpc-cep", "message/send",
+            new A2AMessageParams(Message: new A2AMessage(
+                Role: "user", MessageId: Guid.NewGuid().ToString(), Parts: [new A2APart("text", payload)])));
+
+        using var response = await client.PostAsJsonAsync("/a2a", request);
+        response.EnsureSuccessStatusCode();
+        var rpc = await response.Content.ReadFromJsonAsync<A2ARpcResponse>();
+        Assert.NotNull(rpc);
+        var result = JsonSerializer.Deserialize<ResultadoAnaliseSofia>(
+            rpc.Result.Artifacts[0].Parts[0].Text, ContractJson.Options);
+        Assert.NotNull(result);
+        var finding = Assert.Single(result.Achados);
+        Assert.Contains("Linha 4. Erro de estrutura.", finding.Descricao);
+        Assert.Contains("DIMP10.FILE.PIPE", Assert.Single(finding.Evidencias));
+        Assert.Contains(finding.Descricao, result.Analise);
+        Assert.DoesNotContain("decimais", result.Analise);
+        Assert.DoesNotContain(valorIsolado, finding.Descricao);
+        if (sugereCep)
+        {
+            Assert.Contains("campo 04 (CEP) do registro 0005 na linha 3 está vazio", finding.Descricao);
+            Assert.Contains("se o número corresponder", finding.Descricao);
+        }
+        else
+        {
+            Assert.DoesNotContain("CEP", finding.Descricao);
+        }
+    }
+
     [Fact]
     public async Task PostA2A_VersaoJsonRpcInvalida_DeveRetornarCodigo32600()
     {

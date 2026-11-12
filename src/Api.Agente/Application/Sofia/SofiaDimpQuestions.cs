@@ -151,12 +151,42 @@ public sealed class SofiaDimpQuestions(RuleCatalog catalog)
 
         var details = samples.Select(f =>
         {
+            if (DescribeFileFinding(f) is { } description) return $"- {description}";
             var rule = catalog.Rules.FirstOrDefault(r => r.Id == f.RuleId);
             return rule is null ? $"- {f.OccurrenceKey}: revise a regra {f.RuleId}."
                 : $"- {f.OccurrenceKey}: {Explain(rule)}";
         });
         var remaining = count > samples.Count ? $"\nMais {count - samples.Count} achado(s) neste recorte." : "";
         return $"{count} achado(s) {scope}.\n{string.Join("\n", details)}{remaining}";
+    }
+
+    internal static string? DescribeFileFinding(RuleEvaluation finding)
+    {
+        var location = finding.OccurrenceKey.Replace("line:", "Linha ", StringComparison.Ordinal)
+            .Replace("/field:", ", campo ", StringComparison.Ordinal);
+
+        return finding.RuleId switch
+        {
+            "DIMP10.FILE.PIPE" when finding.PossiblePostalCodeRecordLine is long previousLine =>
+                $"{location}. Erro de estrutura. Há um número de oito dígitos em uma linha isolada. " +
+                $"O campo 04 (CEP) do registro 0005 na linha {previousLine} está vazio. " +
+                $"Confira o CEP na origem e, se o número corresponder, coloque-o nesse campo da linha {previousLine}, " +
+                "mantendo os oito dígitos. Depois, remova a linha isolada e confira os totalizadores após a correção.",
+            "DIMP10.FILE.PIPE" =>
+                $"{location}. Erro de estrutura. Falta o delimitador `|` no início ou no fim da linha. " +
+                "Confira a linha no arquivo de origem e recomponha o registro completo, com os campos na ordem do leiaute.",
+            "DIMP10.FILE.FIELD_NOTATION" =>
+                $"{location}. Erro de estrutura. O código do registro não foi reconhecido. " +
+                "Confira o código e o posicionamento dos delimitadores `|` com o leiaute DIMP V10.",
+            "DIMP10.0005.STRUCTURE" =>
+                $"{location}, registro 0005. Erro de estrutura. O registro não tem a quantidade esperada de campos. " +
+                "Confira a ordem dos campos no Manual DIMP V10. Revise delimitadores extras e campos cortados " +
+                "ou separados por uma quebra de linha.",
+            "DIMP10.0005.F04.TABLE" =>
+                $"{location}, registro 0005 (CEP). O CEP deve ter oito dígitos. " +
+                "Confira o CEP na origem e informe os oito dígitos, sem hífen ou letras, preservando o zero inicial quando houver.",
+            _ => null
+        };
     }
 
     private static string Explain(RuleDefinition rule)

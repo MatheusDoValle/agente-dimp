@@ -34,6 +34,7 @@ public sealed class RuleEvaluation
     public string OccurrenceKey { get; private set; } = "";
     public RuleApplicability Applicability { get; private set; }
     public RuleResult Result { get; private set; }
+    internal long? PossiblePostalCodeRecordLine { get; init; }
 }
 
 public sealed record CoverageTotals(long Applicable, long Passed, long Failed, long NotExecuted, long BlockedBySourceConflict)

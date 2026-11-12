@@ -54,6 +54,7 @@ public sealed class DimpValidationEngine
         var bloco0Lines = 0;
         var bloco1Lines = 0;
         var bloco9Lines = 0;
+        long? emptyPostalCodeRecordLine = null;
 
         await foreach (var record in records.WithCancellation(cancellationToken).ConfigureAwait(false))
         {
@@ -75,6 +76,12 @@ public sealed class DimpValidationEngine
             }
 
             var code = record.Fields[0];
+            var previousPostalCodeRecordLine = emptyPostalCodeRecordLine;
+            emptyPostalCodeRecordLine = code == "0005" && record.HasInitialPipe && record.HasFinalPipe &&
+                record.Fields.Length == Record0005Validator.FieldCount &&
+                string.IsNullOrWhiteSpace(record.Fields[Record0005Validator.PostalCodeIndex])
+                    ? record.LineNumber
+                    : null;
             recordCounts[code] = recordCounts.GetValueOrDefault(code) + 1;
 
             if (code.StartsWith('0')) bloco0Lines++;
@@ -91,13 +98,22 @@ public sealed class DimpValidationEngine
             }
             else
             {
-                // Unknown record
+                var rule = record.HasInitialPipe && record.HasFinalPipe
+                    ? "DIMP10.FILE.FIELD_NOTATION"
+                    : "DIMP10.FILE.PIPE";
+                var possiblePostalCode = !record.HasInitialPipe && !record.HasFinalPipe &&
+                    previousPostalCodeRecordLine == record.LineNumber - 1 && record.Fields.Length == 1 &&
+                    Record0005Validator.IsPostalCodeFormat(code);
+
                 yield return new RuleEvaluation(
                     executionId,
-                    "DIMP10.FILE.FIELD_NOTATION",
+                    rule,
                     $"line:{record.LineNumber}",
                     RuleApplicability.Applicable,
-                    RuleResult.Failed);
+                    RuleResult.Failed)
+                {
+                    PossiblePostalCodeRecordLine = possiblePostalCode ? previousPostalCodeRecordLine : null
+                };
             }
         }
     }
