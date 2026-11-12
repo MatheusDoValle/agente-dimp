@@ -31,6 +31,8 @@ public static class FoundationRegistration
         services.AddSingleton<Api.RAG.Application.Ingestion.DocumentChunker>();
         services.AddScoped<Api.RAG.Infrastructure.AI.IEmbeddingService, Api.RAG.Infrastructure.AI.EmbeddingService>();
         services.AddScoped<Api.RAG.Application.Ingestion.DocumentIngestionService>();
+        services.AddScoped<Api.RAG.Application.Ingestion.IngestionQueue>();
+        services.AddHostedService<Api.RAG.Workers.DocumentIngestionWorker>();
         services.AddScoped<Api.RAG.Infrastructure.Retrieval.ExactVectorSearch>();
         services.ConfigureHttpJsonOptions(options =>
         {

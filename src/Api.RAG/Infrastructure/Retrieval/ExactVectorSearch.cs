@@ -65,7 +65,7 @@ public sealed class ExactVectorSearch(
         var normalizedSha = documentRevisionSha256.Trim().ToLowerInvariant();
 
         // Monta consulta exata pgvector com filtros estritos de revisão e perfil
-        var query = from cv in database.ChunkVectors.AsNoTracking()
+        var query = from cv in database.PublishedVectors().AsNoTracking()
                     join chunk in database.KnowledgeChunks.AsNoTracking() on cv.ChunkId equals chunk.Id
                     join rev in database.DocumentRevisions.AsNoTracking() on chunk.RevisionId equals rev.Id
                     where rev.RevisionSha256 == normalizedSha

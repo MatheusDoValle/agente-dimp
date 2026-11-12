@@ -17,6 +17,19 @@ public sealed class KnowledgeDbContext(DbContextOptions<KnowledgeDbContext> opti
     public DbSet<IngestionChunkCheckpoint> IngestionChunkCheckpoints => Set<IngestionChunkCheckpoint>();
     public DbSet<RetrievalEvaluation> RetrievalEvaluations => Set<RetrievalEvaluation>();
 
+    internal IQueryable<ChunkVector> PublishedVectors() =>
+        from vector in ChunkVectors
+        where (from checkpoint in IngestionChunkCheckpoints
+               join job in IngestionJobs on checkpoint.IngestionJobId equals job.IngestionId
+               where checkpoint.State == "persisted"
+                   && job.Status == "concluida"
+                   && job.RevisionSha256 == vector.Chunk!.Revision!.RevisionSha256
+                   && checkpoint.ChunkHash == vector.Chunk.ChunkHash
+                   && job.EmbeddingProfileId == vector.EmbeddingProfileId
+                   && checkpoint.EmbeddingProfileId == vector.EmbeddingProfileId
+               select checkpoint).Any()
+        select vector;
+
     protected override void OnModelCreating(ModelBuilder model)
     {
         model.HasDefaultSchema("rag");

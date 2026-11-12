@@ -51,7 +51,7 @@ public class RetrievalEvaluationTests(FoundationDatabaseFixture fixture)
 
         // Prepara acervo de teste no banco
         await using var db = fixture.CreateRag();
-        var sha = "fe5610af2429c718b59fffd18becba40c9c0697cbf02da6a3236465fa994ed0a";
+        var sha = new string('c', 64);
 
         var rev = await db.DocumentRevisions.Include(r => r.Chunks).FirstOrDefaultAsync(r => r.RevisionSha256 == sha);
         if (rev == null)
@@ -88,6 +88,18 @@ public class RetrievalEvaluationTests(FoundationDatabaseFixture fixture)
             };
             if (!db.EmbeddingProfiles.Contains(embProfile)) db.EmbeddingProfiles.Add(embProfile);
 
+            var publication = new IngestionJob
+            {
+                DocumentId = rev.DocumentId,
+                RevisionSha256 = sha,
+                Status = "concluida",
+                Stage = "publicacao",
+                ExtractionProfileId = "pdfpig-v1",
+                ChunkProfileId = "chunk-layout10-section-record-v1",
+                EmbeddingProfileId = embProfile.ProfileId
+            };
+            db.IngestionJobs.Add(publication);
+
             var offlineProvider = new OfflineEmbeddingProvider();
 
             foreach (var (text, rec, pages) in chunksToSeed)
@@ -111,6 +123,13 @@ public class RetrievalEvaluationTests(FoundationDatabaseFixture fixture)
                     ChunkId = chunk.Id,
                     EmbeddingProfileId = embProfile.ProfileId,
                     Vector = new Pgvector.Vector(embResult.Values)
+                });
+                db.IngestionChunkCheckpoints.Add(new IngestionChunkCheckpoint
+                {
+                    IngestionJobId = publication.IngestionId,
+                    ChunkHash = chunk.ChunkHash,
+                    EmbeddingProfileId = embProfile.ProfileId,
+                    State = "persisted"
                 });
             }
 

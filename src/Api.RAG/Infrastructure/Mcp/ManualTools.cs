@@ -296,9 +296,11 @@ public static class ManualTools
 
         var sha = args["documentRevisionSha256"]!.GetValue<string>().Trim().ToLowerInvariant();
 
+        var published = db.PublishedVectors();
         var chunk = await db.KnowledgeChunks.AsNoTracking()
             .Include(c => c.Revision)
-            .FirstOrDefaultAsync(c => c.Id == chunkId && c.Revision!.RevisionSha256 == sha, ct);
+            .FirstOrDefaultAsync(c => c.Id == chunkId && c.Revision!.RevisionSha256 == sha &&
+                published.Any(vector => vector.ChunkId == c.Id), ct);
 
         if (chunk == null)
         {
@@ -340,13 +342,14 @@ public static class ManualTools
             return CreateBusinessError("REVISION_NOT_FOUND", $"Revisao '{sha}' nao encontrada.", false);
         }
 
-        var profileIds = await db.ChunkVectors.AsNoTracking()
+        var profileIds = await db.PublishedVectors().AsNoTracking()
             .Where(v => v.Chunk!.RevisionId == revision.Id)
             .Select(v => v.EmbeddingProfileId)
             .Distinct()
             .ToListAsync(ct);
 
-        if (profileIds.Count == 0) profileIds = ["text-embedding-3-small-1536"];
+        if (profileIds.Count == 0)
+            return CreateBusinessError("REVISION_NOT_FOUND", "A revisão ainda não foi publicada.", false);
 
         return new
         {

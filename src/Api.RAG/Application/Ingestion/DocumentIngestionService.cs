@@ -13,13 +13,29 @@ public sealed record IngestionSubmissionResult(
     bool IsAlreadyCompleted,
     IngestionAccepted Accepted);
 
-public sealed class DocumentIngestionService(
-    KnowledgeDbContext database,
-    PdfDocumentExtractor extractor,
-    DocumentChunker chunker,
-    IEmbeddingService embeddingService,
-    TimeProvider clock)
+public sealed class DocumentIngestionService
 {
+    private readonly KnowledgeDbContext database;
+    private readonly PdfDocumentExtractor extractor;
+    private readonly DocumentChunker chunker;
+    private readonly IEmbeddingService embeddingService;
+    private readonly TimeProvider clock;
+    private readonly IConfiguration configuration;
+    private readonly IngestionQueue queue;
+
+    public DocumentIngestionService(KnowledgeDbContext database, PdfDocumentExtractor extractor,
+        DocumentChunker chunker, IEmbeddingService embeddingService, TimeProvider clock, IConfiguration configuration)
+    {
+        this.database = database;
+        this.extractor = extractor;
+        this.chunker = chunker;
+        this.embeddingService = embeddingService;
+        this.clock = clock;
+        this.configuration = configuration;
+        queue = new IngestionQueue(database, clock);
+    }
+
+
     public static readonly string[] SupportedExtractionProfiles = ["pdfpig-v1", "default-extraction-v1"];
     public static readonly string[] SupportedChunkProfiles = ["chunk-layout10-section-record-v1", "default-chunk-v1"];
     public static readonly string[] SupportedEmbeddingProfiles = ["text-embedding-3-small-1536", "local-fake-sha256-v1"];
@@ -66,206 +82,227 @@ public sealed class DocumentIngestionService(
         if (!string.Equals(actualSha256, normalizedExpected, StringComparison.OrdinalIgnoreCase))
             throw new IngestionValidationException("HASH_MISMATCH", $"Hash SHA-256 calculado '{actualSha256}' diverge do esperado '{normalizedExpected}'.");
 
-        // Verifica se já existe IngestionJob para este hash + perfis
-        var existingJob = await database.IngestionJobs
-            .AsNoTracking()
-            .FirstOrDefaultAsync(j =>
-                j.RevisionSha256 == actualSha256 &&
-                j.ExtractionProfileId == extractionProfileId &&
-                j.ChunkProfileId == chunkProfileId &&
-                j.EmbeddingProfileId == embeddingProfileId,
-                cancellationToken);
 
-        if (existingJob != null)
-        {
-            var isCompleted = existingJob.Status == "concluida";
-            return new IngestionSubmissionResult(
-                IsAlreadyCompleted: isCompleted,
-                Accepted: new IngestionAccepted
-                {
-                    IngestionId = existingJob.IngestionId,
-                    DocumentId = existingJob.DocumentId,
-                    RevisionSha256 = existingJob.RevisionSha256,
-                    StatusUrl = $"/api/v1/documentos/ingestoes/{existingJob.IngestionId}",
-                    Status = isCompleted ? IngestionAcceptedStatusValue.Concluida : IngestionAcceptedStatusValue.Recebida
-                });
-        }
+        await using var transaction = await database.Database.BeginTransactionAsync(cancellationToken);
+        // Serialize registration of the document, its revision and work item.
+        await database.Database.ExecuteSqlRawAsync("SELECT pg_advisory_xact_lock(40602001)", cancellationToken);
 
-        // Obtém ou cria Document
-        var document = await database.Documents.FirstOrDefaultAsync(cancellationToken);
-        if (document == null)
+        var job = await database.IngestionJobs.FirstOrDefaultAsync(j =>
+            j.RevisionSha256 == actualSha256 &&
+            j.ExtractionProfileId == extractionProfileId &&
+            j.ChunkProfileId == chunkProfileId &&
+            j.EmbeddingProfileId == embeddingProfileId, cancellationToken);
+        var revision = await database.DocumentRevisions.FirstOrDefaultAsync(
+            r => r.RevisionSha256 == actualSha256, cancellationToken);
+        var now = clock.GetUtcNow();
+
+        if (revision is null)
         {
-            document = new Document
+            var document = await database.Documents.FirstOrDefaultAsync(cancellationToken);
+            if (document is null)
             {
-                Id = Guid.NewGuid(),
-                Identification = "Manual de Orientação do Leiaute da DIMP",
-                CreatedAt = clock.GetUtcNow()
-            };
-            database.Documents.Add(document);
-            await database.SaveChangesAsync(cancellationToken);
-        }
+                document = new Document { Identification = "Manual de Orientação do Leiaute da DIMP", CreatedAt = now };
+                database.Documents.Add(document);
+            }
 
-        // Salva arquivo no storage se fornecido
-        string? storedPath = null;
-        if (!string.IsNullOrWhiteSpace(storageDirectory))
-        {
-            Directory.CreateDirectory(storageDirectory);
-            storedPath = Path.Combine(storageDirectory, $"{actualSha256}.pdf");
-            await File.WriteAllBytesAsync(storedPath, bytes, cancellationToken);
-        }
-
-        // Obtém ou cria DocumentRevision
-        var revision = await database.DocumentRevisions.FirstOrDefaultAsync(r => r.RevisionSha256 == actualSha256, cancellationToken);
-        if (revision == null)
-        {
             revision = new DocumentRevision
             {
-                Id = Guid.NewGuid(),
                 DocumentId = document.Id,
                 SourceUrl = new Uri(sourceUrl),
                 RevisionSha256 = actualSha256,
                 LayoutVersion = layoutVersion,
-                RetrievedAt = clock.GetUtcNow(),
+                RetrievedAt = now,
                 ByteSize = bytes.Length,
-                PageCount = 1, // atualizado após extração
-                SourceStatus = "oficial_publicado",
-                StoragePath = storedPath
+                PageCount = 1
             };
             database.DocumentRevisions.Add(revision);
-            await database.SaveChangesAsync(cancellationToken);
         }
 
-        var newJob = new IngestionJob
+        if (job is null || job.Status == "recebida" || job.Status == "em_processamento")
         {
-            IngestionId = Guid.NewGuid(),
-            DocumentId = document.Id,
-            RevisionSha256 = actualSha256,
-            Status = "recebida",
-            Stage = "recebimento",
-            ExtractionProfileId = extractionProfileId,
-            ChunkProfileId = chunkProfileId,
-            EmbeddingProfileId = embeddingProfileId,
-            CreatedAt = clock.GetUtcNow(),
-            UpdatedAt = clock.GetUtcNow()
-        };
-        database.IngestionJobs.Add(newJob);
+            if (!File.Exists(revision.StoragePath))
+                revision.StoragePath = await StorePdfAsync(bytes, actualSha256, storageDirectory, cancellationToken);
+        }
 
-        var workItem = new IngestionWorkItem
+        if (job is null)
         {
-            IngestionJobId = newJob.IngestionId,
-            AvailableAt = clock.GetUtcNow(),
-            FencingToken = 1,
-            CheckpointVersion = 1
-        };
-        database.IngestionWorkItems.Add(workItem);
+            job = new IngestionJob
+            {
+                DocumentId = revision.DocumentId,
+                RevisionSha256 = actualSha256,
+                ExtractionProfileId = extractionProfileId,
+                ChunkProfileId = chunkProfileId,
+                EmbeddingProfileId = embeddingProfileId,
+                CreatedAt = now,
+                UpdatedAt = now
+            };
+            database.IngestionJobs.Add(job);
+            database.IngestionWorkItems.Add(new IngestionWorkItem
+            {
+                IngestionJobId = job.IngestionId,
+                AvailableAt = now,
+                FencingToken = 1,
+                CheckpointVersion = 1
+            });
+        }
 
         await database.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
 
-        return new IngestionSubmissionResult(
-            IsAlreadyCompleted: false,
-            Accepted: new IngestionAccepted
-            {
-                IngestionId = newJob.IngestionId,
-                DocumentId = document.Id,
-                RevisionSha256 = actualSha256,
-                StatusUrl = $"/api/v1/documentos/ingestoes/{newJob.IngestionId}",
-                Status = IngestionAcceptedStatusValue.Recebida
-            });
+        var completed = job.Status == "concluida";
+        return new IngestionSubmissionResult(completed, new IngestionAccepted
+        {
+            IngestionId = job.IngestionId,
+            DocumentId = job.DocumentId,
+            RevisionSha256 = job.RevisionSha256,
+            StatusUrl = $"/api/v1/documentos/ingestoes/{job.IngestionId}",
+            Status = completed ? IngestionAcceptedStatusValue.Concluida : IngestionAcceptedStatusValue.Recebida
+        });
     }
 
-    public async Task ProcessJobAsync(Guid ingestionJobId, byte[] pdfBytes, CancellationToken cancellationToken = default)
+    private static async Task<string> StorePdfAsync(
+        byte[] bytes, string hash, string? directory, CancellationToken cancellationToken)
     {
-        var job = await database.IngestionJobs.FirstOrDefaultAsync(j => j.IngestionId == ingestionJobId, cancellationToken)
-            ?? throw new KeyNotFoundException($"IngestionJob {ingestionJobId} nao encontrado.");
-
-        if (job.Status == "concluida") return;
-
-        job.Status = "em_processamento";
-        job.Stage = "extracao";
-        job.UpdatedAt = clock.GetUtcNow();
-        await database.SaveChangesAsync(cancellationToken);
-
-        using var stream = new MemoryStream(pdfBytes);
-        var extractedDoc = extractor.Extract(stream);
-
-        var revision = await database.DocumentRevisions.FirstOrDefaultAsync(r => r.RevisionSha256 == job.RevisionSha256, cancellationToken);
-        if (revision != null)
+        directory = Path.GetFullPath(directory ?? Path.Combine(Path.GetTempPath(), "AgenteDIMP.Knowledge"));
+        Directory.CreateDirectory(directory);
+        var path = Path.Combine(directory, $"{hash}.pdf");
+        var temporary = Path.Combine(directory, $"{Guid.NewGuid():N}.tmp");
+        try
         {
-            revision.PageCount = extractedDoc.PageCount;
-            revision.ByteSize = extractedDoc.ByteSize;
+            await File.WriteAllBytesAsync(temporary, bytes, cancellationToken);
+            File.Move(temporary, path, overwrite: true);
+        }
+        finally
+        {
+            File.Delete(temporary);
         }
 
-        job.Stage = "segmentacao";
-        job.UpdatedAt = clock.GetUtcNow();
-        await database.SaveChangesAsync(cancellationToken);
+        return path;
+    }
 
-        var chunkProfile = new ChunkProfile(job.ChunkProfileId);
-        var chunkItems = chunker.ChunkDocument(extractedDoc, chunkProfile);
 
-        job.Stage = "embeddings";
-        job.UpdatedAt = clock.GetUtcNow();
-        await database.SaveChangesAsync(cancellationToken);
-
-        // Garante que o EmbeddingProfile exista no banco
-        var embProfile = await database.EmbeddingProfiles.FindAsync([job.EmbeddingProfileId], cancellationToken);
-        if (embProfile == null)
+    internal async Task ProcessJobAsync(IngestionLease lease, CancellationToken cancellationToken)
+    {
+        var job = await database.IngestionJobs.SingleAsync(j => j.IngestionId == lease.JobId, cancellationToken);
+        var revision = await database.DocumentRevisions.SingleAsync(
+            r => r.RevisionSha256 == job.RevisionSha256, cancellationToken);
+        if (job.Status == "concluida" || job.Status == "falhou")
         {
-            embProfile = new EmbeddingProfile
+            await queue.SaveAsync(lease, cancellationToken, complete: true);
+            return;
+        }
+
+        var offline = job.EmbeddingProfileId == EmbeddingService.OfflineProfileId;
+        if (!offline && (!configuration.GetValue<bool>("DevelopmentProfile:ExternalCallsEnabled") ||
+            string.IsNullOrWhiteSpace(configuration["OpenAI:ApiKey"] ?? configuration["OPENAI_API_KEY"])))
+        {
+            throw new IngestionValidationException("EMBEDDING_PROFILE_UNAVAILABLE", "Perfil de embedding indisponível.");
+        }
+
+        using var deadline = offline ? null : CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        if (deadline is not null)
+        {
+            deadline.CancelAfter(TimeSpan.FromSeconds(configuration.GetValue<double>("Processing:GlobalDeadlineSeconds")));
+            cancellationToken = deadline.Token;
+        }
+
+        job.Status = "em_processamento";
+        await SetStageAsync(job, "extracao", lease, cancellationToken);
+
+        if (!File.Exists(revision.StoragePath))
+            throw new IngestionValidationException("PDF_UNAVAILABLE", "O PDF da revisão não está disponível.");
+        var bytes = await File.ReadAllBytesAsync(revision.StoragePath!, cancellationToken);
+        if (!Convert.ToHexString(SHA256.HashData(bytes)).Equals(job.RevisionSha256, StringComparison.OrdinalIgnoreCase))
+            throw new IngestionValidationException("HASH_MISMATCH", "O PDF armazenado não corresponde à revisão.");
+
+        using var stream = new MemoryStream(bytes);
+        ExtractedPdfDocument extractedDoc;
+        try
+        {
+            extractedDoc = extractor.Extract(stream);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            throw new IngestionValidationException("PDF_EXTRACTION_FAILED", "Falha ao extrair o PDF armazenado.");
+        }
+
+        revision.PageCount = extractedDoc.PageCount;
+        revision.ByteSize = extractedDoc.ByteSize;
+        await SetStageAsync(job, "segmentacao", lease, cancellationToken);
+
+        var chunkItems = chunker.ChunkDocument(extractedDoc, new ChunkProfile(job.ChunkProfileId));
+        if (chunkItems.Count == 0)
+            throw new IngestionValidationException("NO_TEXT_FOUND", "O PDF não gerou trechos indexáveis.");
+        // One call per chunk and one token per UTF-8 byte are conservative upper bounds.
+        if (!offline && (chunkItems.Count > configuration.GetValue<int>("Processing:MaximumProviderCalls") ||
+            chunkItems.Sum(item => (long)System.Text.Encoding.UTF8.GetByteCount(item.Text)) >
+                configuration.GetValue<int>("Processing:TokenBudget")))
+            throw new IngestionValidationException("EMBEDDING_BUDGET_EXCEEDED", "O manual excede o orçamento de embeddings.");
+
+        await SetStageAsync(job, "embeddings", lease, cancellationToken);
+
+        if (await database.EmbeddingProfiles.FindAsync([job.EmbeddingProfileId], cancellationToken) is null)
+        {
+            database.EmbeddingProfiles.Add(new EmbeddingProfile
             {
                 ProfileId = job.EmbeddingProfileId,
-                Provider = job.EmbeddingProfileId == EmbeddingService.OfflineProfileId ? "fake" : "openai",
-                Model = job.EmbeddingProfileId == EmbeddingService.OfflineProfileId ? "fake-offline-embedding" : "text-embedding-3-small",
-                Dimension = 1536,
-                Metric = "cosine",
-                Version = "1.0",
-                Normalized = true,
+                Provider = offline ? "fake" : "openai",
+                Model = offline ? "fake-offline-embedding" : "text-embedding-3-small",
                 CreatedAt = clock.GetUtcNow()
-            };
-            database.EmbeddingProfiles.Add(embProfile);
-            await database.SaveChangesAsync(cancellationToken);
+            });
+            await queue.SaveAsync(lease, cancellationToken);
         }
 
         foreach (var item in chunkItems)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            var checkpoint = await database.IngestionChunkCheckpoints.FindAsync(
+                [job.IngestionId, item.ChunkHash, job.EmbeddingProfileId], cancellationToken);
+            if (checkpoint?.State == "persisted") continue;
 
-            var checkpoint = await database.IngestionChunkCheckpoints
-                .FirstOrDefaultAsync(c => c.IngestionJobId == job.IngestionId && c.ChunkHash == item.ChunkHash && c.EmbeddingProfileId == job.EmbeddingProfileId, cancellationToken);
+            if (!offline && checkpoint?.State is "calling" or "unknown")
+                throw new IngestionValidationException("EMBEDDING_RECONCILIATION_REQUIRED", "Há uma tentativa de embedding com resultado desconhecido.");
 
-            if (checkpoint != null && checkpoint.State == "persisted") continue;
-
-            if (checkpoint == null)
+            if (checkpoint is null)
             {
                 checkpoint = new IngestionChunkCheckpoint
                 {
                     IngestionJobId = job.IngestionId,
                     ChunkHash = item.ChunkHash,
-                    EmbeddingProfileId = job.EmbeddingProfileId,
-                    State = "calling",
-                    UpdatedAt = clock.GetUtcNow()
+                    EmbeddingProfileId = job.EmbeddingProfileId
                 };
                 database.IngestionChunkCheckpoints.Add(checkpoint);
-                await database.SaveChangesAsync(cancellationToken);
             }
 
-            try
+            var chunk = await database.KnowledgeChunks.FirstOrDefaultAsync(
+                c => c.RevisionId == revision.Id && c.ChunkHash == item.ChunkHash, cancellationToken);
+            var existingVector = chunk is null ? null : await database.ChunkVectors.FindAsync(
+                [chunk.Id, job.EmbeddingProfileId], cancellationToken);
+            if (existingVector is null)
             {
-                var embResult = await embeddingService.GenerateEmbeddingAsync(
-                    item.Text,
-                    job.EmbeddingProfileId,
-                    ingestionJobId: job.IngestionId,
-                    cancellationToken: cancellationToken);
+                checkpoint.State = "calling";
+                checkpoint.UpdatedAt = clock.GetUtcNow();
+                await queue.SaveAsync(lease, cancellationToken);
 
-                // Persiste ou obtém o KnowledgeChunk
-                var chunk = await database.KnowledgeChunks
-                    .FirstOrDefaultAsync(c => c.RevisionId == revision!.Id && c.ChunkHash == item.ChunkHash, cancellationToken);
+                EmbeddingResult embedding;
+                try
+                {
+                    embedding = await embeddingService.GenerateEmbeddingAsync(
+                        item.Text, job.EmbeddingProfileId, ingestionJobId: job.IngestionId, cancellationToken: cancellationToken);
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    checkpoint.State = "unknown";
+                    checkpoint.UpdatedAt = clock.GetUtcNow();
+                    await queue.SaveAsync(lease, cancellationToken);
+                    throw new IngestionValidationException("EMBEDDING_FAILED", "Falha ao gerar embedding do trecho.");
+                }
 
-                if (chunk == null)
+                if (chunk is null)
                 {
                     chunk = new KnowledgeChunk
                     {
-                        Id = Guid.NewGuid(),
-                        RevisionId = revision!.Id,
+                        RevisionId = revision.Id,
                         Text = item.Text,
                         Pages = item.Pages,
                         Section = item.Section,
@@ -277,42 +314,40 @@ public sealed class DocumentIngestionService(
                     database.KnowledgeChunks.Add(chunk);
                 }
 
-                var chunkVector = await database.ChunkVectors
-                    .FirstOrDefaultAsync(v => v.ChunkId == chunk.Id && v.EmbeddingProfileId == job.EmbeddingProfileId, cancellationToken);
-
-                if (chunkVector == null)
+                database.ChunkVectors.Add(new ChunkVector
                 {
-                    chunkVector = new ChunkVector
-                    {
-                        ChunkId = chunk.Id,
-                        EmbeddingProfileId = job.EmbeddingProfileId,
-                        Vector = new Vector(embResult.Vector)
-                    };
-                    database.ChunkVectors.Add(chunkVector);
-                }
+                    ChunkId = chunk.Id,
+                    EmbeddingProfileId = job.EmbeddingProfileId,
+                    Vector = new Vector(embedding.Vector)
+                });
+                checkpoint.CallAttemptId = embedding.AttemptId;
+            }
 
-                checkpoint.State = "persisted";
-                checkpoint.CallAttemptId = embResult.AttemptId;
-                checkpoint.UpdatedAt = clock.GetUtcNow();
-                await database.SaveChangesAsync(cancellationToken);
-            }
-            catch
-            {
-                checkpoint.State = "unknown";
-                checkpoint.UpdatedAt = clock.GetUtcNow();
-                await database.SaveChangesAsync(CancellationToken.None);
-                throw;
-            }
+            checkpoint.State = "persisted";
+            checkpoint.UpdatedAt = clock.GetUtcNow();
+            await queue.SaveAsync(lease, cancellationToken);
         }
 
         job.Status = "concluida";
         job.Stage = "publicacao";
         job.UpdatedAt = clock.GetUtcNow();
+        await queue.SaveAsync(lease, cancellationToken, complete: true);
+    }
 
-        var workItem = await database.IngestionWorkItems.FindAsync([job.IngestionId], cancellationToken);
-        if (workItem != null) database.IngestionWorkItems.Remove(workItem);
+    internal async Task FailJobAsync(IngestionLease lease, string code, CancellationToken cancellationToken)
+    {
+        var job = await database.IngestionJobs.SingleAsync(j => j.IngestionId == lease.JobId, cancellationToken);
+        job.Status = "falhou";
+        job.LimitationCodes = [code];
+        job.UpdatedAt = clock.GetUtcNow();
+        await queue.SaveAsync(lease, cancellationToken, complete: true);
+    }
 
-        await database.SaveChangesAsync(cancellationToken);
+    private Task SetStageAsync(IngestionJob job, string stage, IngestionLease lease, CancellationToken cancellationToken)
+    {
+        job.Stage = stage;
+        job.UpdatedAt = clock.GetUtcNow();
+        return queue.SaveAsync(lease, cancellationToken);
     }
 }
 
