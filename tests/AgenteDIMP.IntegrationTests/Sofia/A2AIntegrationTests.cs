@@ -74,8 +74,8 @@ public sealed class A2AIntegrationTests
         Assert.Equal("1.0.0", card.Version);
         Assert.False(card.Capabilities.Streaming);
         Assert.False(card.Capabilities.PushNotifications);
-        Assert.Contains("text", card.DefaultInputModes);
-        Assert.Contains("text", card.DefaultOutputModes);
+        Assert.Contains("text/plain", card.DefaultInputModes);
+        Assert.Contains("text/plain", card.DefaultOutputModes);
         Assert.Single(card.Skills);
         Assert.Equal("analisar_documentos", card.Skills[0].Id);
         Assert.Contains("infis", card.Skills[0].Tags);
@@ -236,7 +236,7 @@ public sealed class A2AIntegrationTests
         {
           "jsonrpc": "2.0",
           "id": "rpc-err-2",
-          "method": "tasks/cancel",
+          "method": "tasks/unknown",
           "params": {
             "message": {
               "role": "user",

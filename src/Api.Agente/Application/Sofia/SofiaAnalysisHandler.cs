@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using System.Text;
 using Api.Agente.Domain.Validation;
 using Microsoft.Extensions.Logging;
@@ -6,18 +7,24 @@ namespace Api.Agente.Application.Sofia;
 
 public sealed class SofiaAnalysisHandler : ISofiaAnalysisHandler
 {
+    internal static readonly Encoding DimpEncoding =
+        Encoding.GetEncoding("iso-8859-1", EncoderFallback.ExceptionFallback, DecoderFallback.ExceptionFallback);
+
     private readonly IDimpParser _parser;
     private readonly DimpValidationEngine _validationEngine;
     private readonly ILogger<SofiaAnalysisHandler> _logger;
+    private readonly SofiaDimpQuestions? _questions;
 
     public SofiaAnalysisHandler(
         IDimpParser parser,
         DimpValidationEngine validationEngine,
-        ILogger<SofiaAnalysisHandler> logger)
+        ILogger<SofiaAnalysisHandler> logger,
+        SofiaDimpQuestions? questions = null)
     {
         _parser = parser ?? throw new ArgumentNullException(nameof(parser));
         _validationEngine = validationEngine ?? throw new ArgumentNullException(nameof(validationEngine));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _questions = questions;
     }
 
     public async Task<ResultadoAnaliseSofia> HandleAsync(SolicitacaoAnaliseSofia solicitacao, CancellationToken cancellationToken = default)
@@ -47,60 +54,13 @@ public sealed class SofiaAnalysisHandler : ISofiaAnalysisHandler
 
         try
         {
-            var rawBytes = Encoding.UTF8.GetBytes(dimpDoc.Texto);
+            var rawBytes = DimpEncoding.GetBytes(dimpDoc.Texto);
             using var stream = new MemoryStream(rawBytes);
-
-            var records = _parser.ReadAsync(stream, cancellationToken);
-            var evaluations = new List<RuleEvaluation>();
-
-            await foreach (var ev in _validationEngine.ValidateAsync(records, null, solicitacao.IdExecucao, cancellationToken).ConfigureAwait(false))
-            {
-                evaluations.Add(ev);
-            }
-
-            var failed = evaluations
-                .Where(e => e.Result == RuleResult.Failed)
-                .GroupBy(e => (e.RuleId, e.OccurrenceKey))
-                .Select(g => g.First())
-                .ToList();
-
-            var achados = new List<AchadoSofia>();
-            var index = 1;
-
-            foreach (var failure in failed)
-            {
-                var severidade = DeterminarSeveridade(failure.RuleId);
-                var achado = new AchadoSofia(
-                    IdAchado: $"ach-{index++:D3}",
-                    Descricao: $"Inconsistencia fiscal na regra {failure.RuleId} ({failure.OccurrenceKey}).",
-                    IdDocumentos: new[] { dimpDoc.IdDocumento },
-                    Evidencias: new[] { $"Falha detectada na regra {failure.RuleId} em {failure.OccurrenceKey} no documento {dimpDoc.Nome}." },
-                    Severidade: severidade
-                );
-                achados.Add(achado);
-            }
-
-            string analise;
-            if (achados.Count == 0)
-            {
-                analise = $"Arquivo DIMP '{dimpDoc.Nome}' analisado com sucesso pelo Agente Fiscal DIMP. Nenhuma inconsistencia detectada em relacao ao Ato COTEPE/ICMS 65/2018.";
-            }
-            else
-            {
-                analise = $"Arquivo DIMP '{dimpDoc.Nome}' analisado: {achados.Count} inconsistencia(s) detectada(s) segundo as regras do Ato COTEPE/ICMS 65/2018.";
-            }
-
-            return ResultadoAnaliseSofia.CriarSucesso(
-                solicitacao.IdExecucao,
-                solicitacao.IdSolicitacao,
-                analise,
-                achados,
-                observacoes: new[]
-                {
-                    $"Total de regras avaliadas: {evaluations.Count}.",
-                    $"Total de inconsistencias: {achados.Count}."
-                }
-            );
+            return await AnalyzeAsync(solicitacao, dimpDoc, stream, limitarDetalhes: false, cancellationToken);
+        }
+        catch (EncoderFallbackException)
+        {
+            return EncodingError(solicitacao);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -114,6 +74,105 @@ public sealed class SofiaAnalysisHandler : ISofiaAnalysisHandler
             );
         }
     }
+
+    public async Task<ResultadoAnaliseSofia> HandleUploadAsync(
+        SolicitacaoAnaliseSofia solicitacao, Stream arquivo, CancellationToken cancellationToken = default)
+    {
+        solicitacao.Validate();
+        var document = solicitacao.Documentos.Single();
+        try
+        {
+            return await AnalyzeAsync(solicitacao, document, arquivo, limitarDetalhes: true, cancellationToken);
+        }
+        catch (EncoderFallbackException)
+        {
+            return EncodingError(solicitacao);
+        }
+        catch (InvalidDataException ex)
+        {
+            return ResultadoAnaliseSofia.CriarErro(
+                solicitacao.IdExecucao, solicitacao.IdSolicitacao, "ARQUIVO_DIMP_INVALIDO",
+                ex.Message, "Não foi possível validar o arquivo enviado.");
+        }
+    }
+
+    private async Task<ResultadoAnaliseSofia> AnalyzeAsync(
+        SolicitacaoAnaliseSofia solicitacao, DocumentoSofia document, Stream stream,
+        bool limitarDetalhes, CancellationToken cancellationToken)
+    {
+        const int maxDetails = 200;
+        var seen = new HashSet<(string RuleId, string OccurrenceKey)>();
+        var findings = new List<AchadoSofia>();
+        var questionScope = _questions?.FindScope(solicitacao.Pergunta);
+        var questionSamples = new List<RuleEvaluation>();
+        var questionCount = 0;
+        var evaluated = 0;
+        var failures = 0;
+        var records = limitarDetalhes ? ReadUploadRecords(cancellationToken) : _parser.ReadAsync(stream, cancellationToken);
+
+        await foreach (var evaluation in _validationEngine.ValidateAsync(records, null, solicitacao.IdExecucao, cancellationToken)
+                           .ConfigureAwait(false))
+        {
+            evaluated++;
+            if (evaluation.Result != RuleResult.Failed || !seen.Add((evaluation.RuleId, evaluation.OccurrenceKey)))
+                continue;
+
+            failures++;
+            if (questionScope?.Matches(evaluation) == true)
+            {
+                questionCount++;
+                if (questionSamples.Count < SofiaDimpQuestions.MaxDetails) questionSamples.Add(evaluation);
+            }
+
+            if (!limitarDetalhes || findings.Count < maxDetails)
+            {
+                findings.Add(new AchadoSofia(
+                    $"ach-{failures:D3}",
+                    $"Inconsistencia fiscal na regra {evaluation.RuleId} ({evaluation.OccurrenceKey}).",
+                    [document.IdDocumento],
+                    [$"Falha detectada na regra {evaluation.RuleId} em {evaluation.OccurrenceKey} no documento {document.Nome}."],
+                    DeterminarSeveridade(evaluation.RuleId)));
+            }
+        }
+
+        var summary = failures == 0
+            ? $"Arquivo DIMP '{document.Nome}' analisado com sucesso pelo Agente Fiscal DIMP. Nenhuma inconsistencia detectada em relacao ao Ato COTEPE/ICMS 65/2018."
+            : $"Arquivo DIMP '{document.Nome}' analisado: {failures} inconsistencia(s) detectada(s) segundo as regras do Ato COTEPE/ICMS 65/2018.";
+        var analysis = _questions?.Answer(solicitacao.Pergunta, questionScope, questionSamples, questionCount) ?? summary;
+        var notes = new List<string>
+        {
+            $"Total de regras avaliadas: {evaluated}.",
+            $"Total de inconsistencias: {failures}."
+        };
+        if (failures > findings.Count)
+            notes.Add($"São exibidos os primeiros {findings.Count} achados. A contagem e as perguntas por linha consideram o arquivo inteiro.");
+
+        return ResultadoAnaliseSofia.CriarSucesso(solicitacao.IdExecucao, solicitacao.IdSolicitacao, analysis, findings, notes);
+
+        async IAsyncEnumerable<DimpRecord> ReadUploadRecords([EnumeratorCancellation] CancellationToken ct)
+        {
+            var foundHeader = false;
+            await foreach (var record in _parser.ReadAsync(stream, ct).ConfigureAwait(false))
+            {
+                if (!foundHeader && !record.Fields.IsEmpty)
+                {
+                    if (record.Fields[0] != "0000")
+                        throw new InvalidDataException("O primeiro registro do arquivo deve ser o 0000.");
+                    foundHeader = true;
+                }
+                // The validation engine emits line-scoped evaluations before advancing to the next record.
+                seen.Clear();
+                yield return record;
+            }
+            if (!foundHeader) throw new InvalidDataException("Registro de abertura 0000 não encontrado.");
+        }
+    }
+
+    private static ResultadoAnaliseSofia EncodingError(SolicitacaoAnaliseSofia solicitacao) =>
+        ResultadoAnaliseSofia.CriarErro(
+            solicitacao.IdExecucao, solicitacao.IdSolicitacao, "CODIFICACAO_DIMP_INVALIDA",
+            "O texto possui caracteres fora da codificacao ISO-8859-1.",
+            "Nao foi possivel validar o documento com a codificacao DIMP.");
 
     private static string DeterminarSeveridade(string ruleId)
     {

@@ -7,22 +7,30 @@ public sealed record A2ARpcRequest(
     [property: JsonPropertyName("jsonrpc")] string JsonRpc,
     [property: JsonPropertyName("id")] string Id,
     [property: JsonPropertyName("method")] string Method,
-    [property: JsonPropertyName("params")] A2AMessageParams Params
+    [property: JsonPropertyName("params")] A2AMessageParams? Params = null
 )
 {
     public const string ExpectedVersion = "2.0";
     public const string SendMethod = "message/send";
+    public const string TasksGetMethod = "tasks/get";
+    public const string TasksCancelMethod = "tasks/cancel";
 }
 
 public sealed record A2AMessageParams(
-    [property: JsonPropertyName("message")] A2AMessage Message
+    [property: JsonPropertyName("message")] A2AMessage? Message = null,
+    [property: JsonPropertyName("id")] string? Id = null,
+    [property: JsonPropertyName("taskId")] string? TaskId = null
 );
 
 public sealed record A2AMessage(
     [property: JsonPropertyName("role")] string Role,
     [property: JsonPropertyName("messageId")] string MessageId,
     [property: JsonPropertyName("parts")] IReadOnlyList<A2APart> Parts
-);
+)
+{
+    [JsonPropertyName("kind")]
+    public string? Kind { get; init; }
+}
 
 public sealed record A2APart(
     [property: JsonPropertyName("kind")] string Kind,
@@ -65,7 +73,11 @@ public sealed record A2ATaskResult(
     [property: JsonPropertyName("contextId")] string ContextId,
     [property: JsonPropertyName("status")] A2ATaskStatus Status,
     [property: JsonPropertyName("artifacts")] IReadOnlyList<A2AArtifact> Artifacts
-);
+)
+{
+    [JsonPropertyName("kind")]
+    public string Kind => "task";
+}
 
 public sealed record A2ATaskStatus(
     [property: JsonPropertyName("state")] string State

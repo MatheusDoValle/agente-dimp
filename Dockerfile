@@ -10,6 +10,7 @@ RUN dotnet restore "src/Api.Agente/Api.Agente.csproj"
 
 # Copiar codigo fonte do servico
 COPY src/Api.Agente/ src/Api.Agente/
+COPY docs/rules/dimp-v10/catalog.json docs/rules/dimp-v10/manifest.json docs/rules/dimp-v10/
 
 # Compilar e publicar binario otimizado
 RUN dotnet publish "src/Api.Agente/Api.Agente.csproj" -c Release -o /app/publish --no-restore
