@@ -16,7 +16,7 @@ public sealed record McpHit(
     IReadOnlyList<string> RecordCodes,
     IReadOnlyList<string> FieldCodes,
     string Text,
-    McpRankingMetric RankingMetric);
+    McpRankingMetric RankingMetric, string? MatchType = null);
 
 public sealed record McpUsageReference(
     Guid CallAttemptId,
@@ -127,63 +127,32 @@ public sealed class RagMcpClient(HttpClient httpClient) : IRagMcpClient
             return new McpSearchResult(Guid.NewGuid(), [], ["MCP_UNAVAILABLE"], []);
         }
 
-        // Verifica se retornou erro de negócio
-        if (content["error"] != null)
+        try
         {
-            var errorCode = content["error"]?["code"]?.GetValue<string>() ?? "MCP_ERROR";
-            return new McpSearchResult(Guid.NewGuid(), [], [errorCode], []);
-        }
-
-        var retrievalId = Guid.TryParse(content["retrievalId"]?.GetValue<string>(), out var rid) ? rid : Guid.NewGuid();
-        var limitationCodes = content["limitationCodes"]?.AsArray()
-            .Select(n => n?.GetValue<string>()).Where(s => s != null).Cast<string>().ToList() ?? [];
-
-        var hits = new List<McpHit>();
-        if (content["hits"] is JsonArray hitsArr)
-        {
-            foreach (var h in hitsArr)
+            if (content["error"] is JsonObject error)
             {
-                if (h is not JsonObject ho) continue;
-                var chunkId = Guid.TryParse(ho["chunkId"]?.GetValue<string>(), out var cid) ? cid : Guid.Empty;
-                var docId = Guid.TryParse(ho["documentId"]?.GetValue<string>(), out var did) ? did : Guid.Empty;
-                var revSha = ho["documentRevisionSha256"]?.GetValue<string>() ?? revisionSha256;
-                var layVer = ho["layoutVersion"]?.GetValue<string>() ?? layoutVersion;
-                var embProf = ho["embeddingProfileId"]?.GetValue<string>() ?? embeddingProfileId;
-                var pages = ho["pages"]?.AsArray().Select(n => n?.GetValue<int>() ?? 0).ToArray() ?? [];
-                var section = ho["section"]?.GetValue<string>();
-                var recCodes = ho["recordCodes"]?.AsArray().Select(n => n?.GetValue<string>() ?? "").ToList() ?? [];
-                var fieldCodes = ho["fieldCodes"]?.AsArray().Select(n => n?.GetValue<string>() ?? "").ToList() ?? [];
-                var text = ho["text"]?.GetValue<string>() ?? "";
-
-                var metricName = ho["rankingMetric"]?["name"]?.GetValue<string>() ?? "cosine_distance";
-                var metricVal = ho["rankingMetric"]?["value"]?.GetValue<double>() ?? 1.0;
-
-                hits.Add(new McpHit(
-                    chunkId, docId, revSha, layVer, embProf, pages, section,
-                    recCodes, fieldCodes, text, new McpRankingMetric(metricName, metricVal)));
+                var code = error["code"]?.GetValue<string>() ?? "MCP_ERROR";
+                return new McpSearchResult(Guid.NewGuid(), [], [code], []);
             }
-        }
 
-        var usageReferences = new List<McpUsageReference>();
-        if (content["usageReferences"] is JsonArray usageArr)
-        {
-            foreach (var u in usageArr)
+            var result = content.Deserialize<McpSearchResult>(JsonOpts);
+            if (result is null || result.RetrievalId == Guid.Empty || result.Hits is null ||
+                result.LimitationCodes is null || result.UsageReferences is null ||
+                result.Hits.Any(hit => hit is null || hit.ChunkId == Guid.Empty || hit.DocumentId == Guid.Empty ||
+                    !string.Equals(hit.DocumentRevisionSha256, revisionSha256, StringComparison.OrdinalIgnoreCase) ||
+                    hit.LayoutVersion != layoutVersion || hit.EmbeddingProfileId != embeddingProfileId ||
+                    hit.Pages is null || hit.RecordCodes is null || hit.FieldCodes is null ||
+                    string.IsNullOrWhiteSpace(hit.Text) || hit.RankingMetric is null))
             {
-                if (u is not JsonObject uo) continue;
-                var attemptId = Guid.TryParse(uo["callAttemptId"]?.GetValue<string>(), out var aid) ? aid : Guid.Empty;
-                var serviceOwner = uo["serviceOwner"]?.GetValue<string>() ?? "Api.RAG";
-                var usageState = uo["usageState"]?.GetValue<string>() ?? "unknown";
-                var tokensIn = uo["tokensInput"]?.GetValue<long?>();
-                var tokensOut = uo["tokensOutput"]?.GetValue<long?>();
-                var cached = uo["cachedTokens"]?.GetValue<long?>();
-                var embTokens = uo["embeddingTokens"]?.GetValue<long?>();
-
-                usageReferences.Add(new McpUsageReference(
-                    attemptId, serviceOwner, usageState, tokensIn, tokensOut, cached, embTokens));
+                return new McpSearchResult(Guid.NewGuid(), [], ["MCP_INVALID_RESPONSE"], []);
             }
-        }
 
-        return new McpSearchResult(retrievalId, hits, limitationCodes, usageReferences);
+            return result;
+        }
+        catch (Exception ex) when (ex is JsonException or InvalidOperationException)
+        {
+            return new McpSearchResult(Guid.NewGuid(), [], ["MCP_INVALID_RESPONSE"], []);
+        }
     }
 
     public async Task<McpChunkResult?> GetManualChunkAsync(Guid chunkId, string revisionSha256, CancellationToken cancellationToken = default)
@@ -314,7 +283,11 @@ public sealed class RagMcpClient(HttpClient httpClient) : IRagMcpClient
 
             return JsonNode.Parse(text) as JsonObject;
         }
-        catch
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+        {
+            return null;
+        }
+        catch (Exception ex) when (ex is HttpRequestException or JsonException or InvalidOperationException)
         {
             return null;
         }

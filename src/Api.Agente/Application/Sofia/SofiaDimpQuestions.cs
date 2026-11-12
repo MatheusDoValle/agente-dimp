@@ -10,7 +10,8 @@ public sealed class SofiaDimpQuestions(RuleCatalog catalog)
 {
     internal const int MaxDetails = 5;
     internal const string GeneralHelp = "Posso responder dúvidas gerais sobre a DIMP, orientar por onde começar ou explicar um registro do Manual V10. Experimente perguntar “O que é DIMP?” ou “O que significa o campo 2 do registro 9999?”.";
-
+    internal sealed record ManualIdentity(string LayoutVersion, string RevisionSha256, Uri Url, int PageCount);
+    internal ManualIdentity? Manual { get; private init; }
     private const RegexOptions IgnoreCase = RegexOptions.IgnoreCase | RegexOptions.CultureInvariant;
     private static readonly Regex RuleId = new(@"\bDIMP10\.[A-Z0-9_:-]+(?:\.[A-Z0-9_:-]+)+", IgnoreCase);
     private static readonly Regex RecordNumber = new(@"\b[0-9]{4}\b");
@@ -20,6 +21,14 @@ public sealed class SofiaDimpQuestions(RuleCatalog catalog)
     private static readonly Regex DefinitionQuestion = new(@"\b(?:o (?:que|q) [eé]|o que significa|qual o significado de|(?:pra|para) que serve)\s+(?:a\s+)?dimp\b", IgnoreCase);
     private static readonly Regex HelpQuestion = new(@"\b(?:ajudar|ajuda|o que (?:voc[eê]|vc) (?:faz|consegue fazer))\b", IgnoreCase);
     private static readonly Regex NextStepQuestion = new(@"\b(?:o (?:que|q) (?:eu )?(?:devo|preciso) fazer|como (?:eu )?(?:come[cç]o|procedo|preparo|fa[cç]o))\b", IgnoreCase);
+    private static readonly Regex GeneralHelpQuestion = new(
+        @"^\s*(?:(?:(?:como|em que|no que)\s+)?(?:(?:voc[eê]|vc)\s+)?(?:pode|consegue)\s+(?:me\s+)?ajudar|o que (?:voc[eê]|vc) (?:faz|consegue fazer)|ajuda)[\s?!\.]*$",
+        IgnoreCase);
+    private static readonly Regex GeneralNextStepQuestion = new(
+        @"^\s*(?:o (?:que|q) (?:eu )?(?:devo|preciso) fazer|como (?:eu )?(?:come[cç]o|procedo|preparo|fa[cç]o))(?:\s+(?:agora|com (?:a )?dimp|(?:a |o arquivo )?dimp))?[\s?!\.]*$",
+        IgnoreCase);
+    private static readonly Regex FileReviewQuestion = new(
+        @"\b(?:meu arquivo|minha dimp|arquivo anexado|dimp anexad[ao]|preciso corrigir|devo corrigir|o que corrigir)\b", IgnoreCase);
     private static readonly Regex OperationDateQuestion = new(@"\bdata\s+d[ae]\s+(?:venda|transa[çc][ãa]o|opera[çc][ãa]o)\b", IgnoreCase);
     private static readonly Regex CancelledOperation = new(@"\b(?:cancelament\w*|cancelad\w*|origin(?:al|ais))\b", IgnoreCase);
 
@@ -36,7 +45,21 @@ public sealed class SofiaDimpQuestions(RuleCatalog catalog)
             var text = Encoding.UTF8.GetString(bytes).Replace("\r\n", "\n", StringComparison.Ordinal);
             bytes = Encoding.UTF8.GetBytes(text.Replace("\n", "\r\n", StringComparison.Ordinal));
         }
-        return new(RuleCatalog.Load(bytes, expectedHash));
+        var catalog = RuleCatalog.Load(bytes, expectedHash);
+        var source = manifest.RootElement.GetProperty("source");
+        var revision = source.GetProperty("revisionSha256").GetString();
+        var layout = manifest.RootElement.GetProperty("layoutVersion").GetString();
+        if (layout != "10" || !string.Equals(revision, catalog.RevisionSha256, StringComparison.OrdinalIgnoreCase)
+            || !Uri.TryCreate(source.GetProperty("url").GetString(), UriKind.Absolute, out var url)
+            || url.Scheme != Uri.UriSchemeHttps)
+        {
+            throw new InvalidDataException("Identidade do Manual DIMP inválida.");
+        }
+
+        return new SofiaDimpQuestions(catalog)
+        {
+            Manual = new(layout, catalog.RevisionSha256.ToLowerInvariant(), url, source.GetProperty("pageCount").GetInt32())
+        };
     }
 
     internal sealed record FindingScope(string Label, Func<RuleEvaluation, bool> Matches);
@@ -68,21 +91,23 @@ public sealed class SofiaDimpQuestions(RuleCatalog catalog)
             : "Posso explicar os achados do arquivo ou consultar uma regra do DIMP V10. Experimente perguntar o que corrigir, se há erro na linha 19 ou o que significa o campo 2 do registro 9999.");
     }
 
-    internal string AnswerWithoutFile(string question)
+    internal string? AnswerWithoutFile(string question, bool allowManualSearch)
     {
         if (DefinitionQuestion.IsMatch(question))
             return "DIMP significa Declaração de Informações de Meios de Pagamentos. É um arquivo padronizado que reúne informações sobre transações de pagamento e operações intermediadas para os fiscos estaduais. O Manual DIMP V10 do CONFAZ descreve como os dados são organizados em blocos, registros e campos.";
 
-        if (HelpQuestion.IsMatch(question))
+        if ((allowManualSearch ? GeneralHelpQuestion : HelpQuestion).IsMatch(question))
             return "Posso explicar o que é DIMP e consultar registros, campos e regras no Manual DIMP V10. Se você anexar um arquivo, posso apontar inconsistências, indicar as linhas e explicar as regras relacionadas aos achados.";
 
-        if (NextStepQuestion.IsMatch(question))
+        if ((allowManualSearch ? GeneralNextStepQuestion : NextStepQuestion).IsMatch(question))
             return "Se você está começando, identifique a UF, o período e a versão do leiaute do arquivo. Se já tem um DIMP gerado, anexe-o aqui para revisar a estrutura e os achados. Você quer entender a declaração, preparar um arquivo ou revisar um que já tem?";
 
-        if (FindScope(question) is not null)
+        if (allowManualSearch
+            ? LineNumber.IsMatch(question) || FileReviewQuestion.IsMatch(question)
+            : FindScope(question) is not null)
             return "Para verificar erros ou sugerir correções no seu arquivo, anexe a DIMP. Para uma dúvida geral, indique o registro ou o campo do manual que você quer entender.";
 
-        return ExplainReference(question) ?? GeneralHelp;
+        return ExplainReference(question) ?? (allowManualSearch ? null : GeneralHelp);
     }
 
     private string? ExplainReference(string question)

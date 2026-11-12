@@ -6,6 +6,8 @@ using Api.Agente.Application.Reports;
 using Api.Agente.Infrastructure.Jobs;
 using Api.Agente.Infrastructure.Persistence;
 using Api.Agente.Infrastructure.Reports;
+using Api.Agente.Infrastructure.Rag;
+using Api.Agente.Application.Sofia;
 using Api.Agente.Infrastructure.TemporaryStorage;
 using Api.Agente.Infrastructure.Usage;
 using Api.Agente.Workers;
@@ -53,12 +55,6 @@ public static class FoundationRegistration
         services.AddScoped<ExecutionFinalizer>();
         services.AddOptions<MemoryBootstrapOptions>().Bind(configuration.GetSection("Memory"));
 
-        services.AddHttpClient<Api.Agente.Infrastructure.Rag.IRagMcpClient, Api.Agente.Infrastructure.Rag.RagMcpClient>(client =>
-        {
-            var baseAddress = configuration["Services:RagApi:BaseUrl"] ?? "http://127.0.0.1:5081";
-            client.BaseAddress = new Uri(baseAddress);
-            client.Timeout = TimeSpan.FromSeconds(30);
-        });
 
         services.AddSingleton<Api.Agente.Application.AI.AnalysisContextBuilder>();
         services.AddSingleton<Api.Agente.Application.AI.AnalyticResponseValidator>();
@@ -94,6 +90,25 @@ public static class FoundationRegistration
         services.AddSingleton<Api.Agente.Domain.Validation.IDimpParser, Api.Agente.Domain.Validation.DimpParser>();
         services.AddSingleton<Api.Agente.Domain.Validation.DimpValidationEngine>();
         services.AddScoped<Api.Agente.Application.Sofia.ISofiaAnalysisHandler, Api.Agente.Application.Sofia.SofiaAnalysisHandler>();
+        services.AddScoped<SofiaManualQuestionHandler>();
+
+        var rag = configuration.GetSection("Services:RagApi");
+        services.AddHttpClient<IRagMcpClient, RagMcpClient>(client =>
+        {
+            var baseAddress = rag["BaseUrl"] ?? "http://127.0.0.1:5081";
+            if (!Uri.TryCreate(baseAddress, UriKind.Absolute, out var address)
+                || address.Scheme is not ("http" or "https") || address.UserInfo.Length != 0
+                || address.Query.Length != 0 || address.Fragment.Length != 0)
+            {
+                throw new InvalidOperationException("Configure Services__RagApi__BaseUrl com uma URL HTTP(S) válida.");
+            }
+
+            var timeout = rag.GetValue("TimeoutSeconds", 30);
+            if (timeout is < 1 or > 60)
+                throw new InvalidOperationException("Configure Services__RagApi__TimeoutSeconds entre 1 e 60.");
+            client.BaseAddress = address;
+            client.Timeout = TimeSpan.FromSeconds(timeout);
+        });
 
         var allowedOrigins = configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
             ?? new[] { "http://localhost:4200", "http://localhost:5173" };

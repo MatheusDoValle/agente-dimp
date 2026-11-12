@@ -35,7 +35,7 @@ internal static class LocalDimpDemoEndpoint
             .DisableAntiforgery()
             .WithTags("Demonstração DIMP")
             .WithSummary("Fazer uma pergunta ou analisar um DIMP")
-            .WithDescription("Para uma dúvida geral, preencha só pergunta. Para validar um arquivo, anexe arquivo e escreva uma pergunta se quiser. " + limitDescription)
+            .WithDescription("Para consultar o Manual DIMP, preencha só pergunta e use uma dúvida geral, sem dados pessoais. Para validar um arquivo, anexe arquivo e escreva uma pergunta se quiser. " + limitDescription)
             .Produces<ResultadoAnaliseSofia>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized)
@@ -44,7 +44,7 @@ internal static class LocalDimpDemoEndpoint
 
     private static async Task<IResult> AnalyzeAsync(
         IFormFile? arquivo, [FromForm] string? pergunta, ISofiaAnalysisHandler handler,
-        SofiaDimpQuestions questions, CancellationToken cancellationToken)
+        SofiaManualQuestionHandler manualQuestions, CancellationToken cancellationToken)
     {
         var question = pergunta?.Trim();
         if (arquivo is null)
@@ -52,9 +52,7 @@ internal static class LocalDimpDemoEndpoint
             if (string.IsNullOrWhiteSpace(question))
                 return Results.BadRequest(new { mensagem = "Escreva uma pergunta ou selecione um arquivo DIMP." });
 
-            return Results.Ok(ResultadoAnaliseSofia.CriarSucesso(
-                Guid.NewGuid(), Guid.NewGuid(), questions.AnswerWithoutFile(question), [],
-                ["Consulta geral. Nenhum arquivo foi analisado."]));
+            return Results.Ok(await manualQuestions.AnswerAsync(question, cancellationToken));
         }
 
         var name = Path.GetFileName(arquivo.FileName.Replace('\\', '/'));

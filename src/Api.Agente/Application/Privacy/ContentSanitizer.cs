@@ -21,11 +21,21 @@ public sealed class ContentSanitizer
 {
     private static readonly Regex Cnpj = Pattern(@"(?<![\p{L}\p{N}])\d{2}[.\s]?\d{3}[.\s]?\d{3}[/\s]?\d{4}[-\s]?\d{2}(?![\p{L}\p{N}])");
     private static readonly Regex Cpf = Pattern(@"(?<![\p{L}\p{N}])\d{3}[.\s]?\d{3}[.\s]?\d{3}[-\s]?\d{2}(?![\p{L}\p{N}])");
+    private static readonly Regex Email = Pattern(@"[\w.+-]+@[\w.-]+\.[\p{L}]{2,}");
     private static readonly Regex Token = Pattern(@"\[MASK_[A-Z]+_[a-f0-9]{32}\]");
     private readonly TemporaryExecutionFiles _files;
     private readonly TimeProvider _clock;
 
     public ContentSanitizer(TemporaryStorageOptions options, TimeProvider clock) { _files = new(options); _clock = clock; }
+
+    // Manual queries only need irreversible placeholders. There is no execution map to retain.
+    internal static string MinimizeManualQuery(string question)
+    {
+        var normalized = question.Normalize(NormalizationForm.FormKC);
+        var withoutCnpj = Cnpj.Replace(normalized, "[CNPJ]");
+        var withoutCpf = Cpf.Replace(withoutCnpj, "[CPF]");
+        return Email.Replace(withoutCpf, "[EMAIL]");
+    }
 
     public async Task<MaskedText> SanitizeAsync(Guid executionId, string text, IEnumerable<SensitiveValue>? knownValues = null, CancellationToken cancellationToken = default)
     {

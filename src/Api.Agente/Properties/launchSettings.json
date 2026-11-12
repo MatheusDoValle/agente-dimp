@@ -9,7 +9,8 @@
         "ASPNETCORE_ENVIRONMENT": "Development",
         "Urls": "http://127.0.0.1:5098",
         "ClassroomDemo__Enabled": "true",
-
+        "ClassroomDemo__ManualSearchEnabled": "true",
+        "Services__RagApi__TimeoutSeconds": "15",
         "A2A__PublicUrl": "http://127.0.0.1:5098/a2a"
       }
     },
